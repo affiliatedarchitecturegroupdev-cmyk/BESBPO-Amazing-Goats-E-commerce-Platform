@@ -33,3 +33,12 @@ TypeScript strict, small modules, pure functions for business rules, DTO validat
 
 ## Agent workflow note
 When branching from `main`, do not run `git reset --hard` (or `git checkout -f`) while the working tree has uncommitted edits to already-tracked files: it discards them, and a later commit then contains only newly-added files. Commit or `git stash -u` first, and check `git status` is clean before switching branches.
+
+## Session learnings
+- **Optional Nest dependencies need a token.** A bare constructor parameter that is not a provider makes Nest throw `Nest can't resolve dependencies of X (..., ?)` and the service never boots. Inject optional collaborators as `@Optional() @Inject(SOME_TOKEN) x: T = default`, and provide `{ provide: SOME_TOKEN, useFactory: ... }`. This bit `PermissionsGuard`, `AccessService` (clock) and `MfaService` (issuer).
+- **Share one store instance** between a request interceptor and an API that reads it: declare the provider in the owning module and `exports:` it, rather than declaring it in both.
+- **Pure rules + a store boundary.** Keep business rules as pure functions (no I/O, clock passed in) and put persistence behind an interface with an in-memory default. That is what makes them unit-testable without a database.
+- **No Postgres in the test sandbox.** `postgresql` is not installed and cannot be added, so assert SQL-level guarantees (e.g. the append-only triggers) by reading the migration file in a test; `process.cwd()` is the package dir under vitest, so resolve `../../db/...` from there.
+- **Local monorepo runner:** `tsc --noEmit -p tsconfig.json` for lint and `vitest run` per package/service/app; build a package (`tsc -p packages/x/tsconfig.json`) before a service that imports its `dist` can boot. `dist/` is gitignored.
+- **Merge workflow used:** branch `agent/<task>-<slug>` → push → `create_pr` with labels `agent-pr,human-approved` → mark ready → wait for `ci` and `agent-gate` → merge via `PUT .../merge-async` (poll the uuid) → `git fetch origin main && git reset --hard origin/main`.
+
