@@ -5,9 +5,10 @@ import { HealthController } from './health/health.controller';
 import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
 import { AuditModule } from './audit/audit.module';
+import { AccessModule } from './access/access.module';
 
 @Module({
-  imports: [UsersModule, RolesModule, AuditModule],
+  imports: [UsersModule, RolesModule, AuditModule, AccessModule],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: PermissionsGuard }, { provide: APP_INTERCEPTOR, useClass: AuditInterceptor }],
 })
