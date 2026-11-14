@@ -10,9 +10,9 @@ files: ["db/seeds/**"]
 Map the catalogue CSV into products and variants.
 
 ## Acceptance
-- [ ] 140 variants loaded
-- [ ] Compliance rows created per product
-- [ ] Tests added and passing
+- [x] 140 variants loaded
+- [x] Compliance rows created per product
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.
