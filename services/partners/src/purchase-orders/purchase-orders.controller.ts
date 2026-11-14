@@ -1,13 +1,15 @@
-import { Controller, Get } from '@nestjs/common';
-import { RequirePermissions } from '@ag/nest-auth';
+import { Controller, Get, Query, Req } from '@nestjs/common';
+import { RequirePermissions, userFromRequest } from '@ag/nest-auth';
 import { PurchaseOrdersService } from './purchase-orders.service';
+import { partnerOrgId } from '../partner-scope';
 
-// TODO(agent): implement per tasks/ backlog. Keep every route behind RequirePermissions.
 @Controller('partners/purchase-orders')
 export class PurchaseOrdersController {
   constructor(private readonly service: PurchaseOrdersService) {}
 
   @Get()
   @RequirePermissions('procurement:manage')
-  list() { return this.service.list(); }
+  list(@Req() req: any, @Query('orgId') orgId?: string) {
+    return this.service.list(partnerOrgId(userFromRequest(req), orgId));
+  }
 }

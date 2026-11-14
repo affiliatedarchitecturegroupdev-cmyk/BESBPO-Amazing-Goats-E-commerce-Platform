@@ -1,6 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { PurchaseOrder } from '../partner-domain';
+import { PartnerStore, PARTNER_STORE } from '../partner.store';
 
 @Injectable()
 export class PurchaseOrdersService {
-  list(): unknown[] { return []; } // TODO(agent): read from the partners schema
+  constructor(@Inject(PARTNER_STORE) private readonly store: PartnerStore) {}
+
+  list(orgId: string): Promise<PurchaseOrder[]> {
+    return this.store.purchaseOrders(orgId);
+  }
 }
