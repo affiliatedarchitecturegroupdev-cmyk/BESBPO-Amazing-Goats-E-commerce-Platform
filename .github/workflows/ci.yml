@@ -25,3 +25,23 @@ jobs:
         working-directory: services/ai-forecast
       - run: pytest -q
         working-directory: services/analytics
+  db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ag
+          POSTGRES_PASSWORD: ag
+          POSTGRES_DB: ag
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ag" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      # Applies every migration and seed to a clean database, then runs the
+      # row-level security tests (db/tests/rls.sql).
+      - run: bash scripts/test-rls.sh
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
