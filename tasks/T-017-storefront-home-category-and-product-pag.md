@@ -10,9 +10,9 @@ files: ["apps/storefront/**"]
 Storefront: home, category and product pages.
 
 ## Acceptance
-- [ ] Matches wireframes sf-home, sf-category, sf-product
-- [ ] Fulfilment tags and cut-off banner
-- [ ] Tests added and passing
+- [x] Matches wireframes sf-home, sf-category, sf-product
+- [x] Fulfilment tags and cut-off banner
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.
