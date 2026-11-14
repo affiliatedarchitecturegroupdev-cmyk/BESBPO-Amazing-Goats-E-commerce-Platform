@@ -10,9 +10,9 @@ files: ["apps/admin/**", "services/identity/**"]
 Admin: roles and access management.
 
 ## Acceptance
-- [ ] Role changes need a second approver
-- [ ] Break-glass elevation recorded
-- [ ] Tests added and passing
+- [x] Role changes need a second approver
+- [x] Break-glass elevation recorded
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.
