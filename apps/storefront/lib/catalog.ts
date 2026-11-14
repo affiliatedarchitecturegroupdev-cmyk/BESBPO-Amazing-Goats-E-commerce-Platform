@@ -1,4 +1,4 @@
-import type { Channel, FulfilmentType, Phase, Temperature, Variant } from '@ag/shared-types';
+import type { Channel, Phase, Temperature, Variant } from '@ag/shared-types';
 
 /** A sellable variant as the storefront shows it, with the merchandising flags we render as badges. */
 export interface StorefrontItem extends Variant {
@@ -92,10 +92,6 @@ export function featuredBoxes(): StorefrontItem[] {
   return byCategory('boxes');
 }
 
-export function produceItems(): StorefrontItem[] {
-  return byCategory('produce');
-}
-
 /** Badges to show on a card, in priority order. */
 export function badgesFor(i: StorefrontItem): Badge[] {
   const badges: Badge[] = [];
@@ -104,8 +100,4 @@ export function badgesFor(i: StorefrontItem): Badge[] {
   if (i.special) badges.push('special');
   if (i.lowStock) badges.push('low_stock');
   return badges;
-}
-
-export function isFulfilment(t: FulfilmentType): boolean {
-  return ['in_stock', 'pre_order_cycle', 'reservation', 'quote', 'seasonal_pre_order'].includes(t);
 }

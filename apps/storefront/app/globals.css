@@ -18,3 +18,4 @@ h1,h2,h3{font-family:Fraunces,Georgia,serif;font-style:italic;line-height:1.2}
 .ban{background:var(--ochre);color:var(--forest);border-color:var(--ochre)}
 .img{height:220px;border-radius:var(--radius-card);border:1px dashed var(--border);display:grid;place-items:center;color:var(--muted);background:repeating-linear-gradient(135deg,#1F3B2D18,#1F3B2D18 10px,#1F3B2D0a 10px,#1F3B2D0a 20px)}
 .p{color:var(--muted);font-size:14px}
+.fld{border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--muted);font-size:14px;margin:8px 0;background:var(--surface)}

@@ -10,9 +10,9 @@ files: ["apps/storefront/**"]
 Storefront: cart and checkout.
 
 ## Acceptance
-- [ ] Cart grouped by fulfilment
-- [ ] Pay-by-bank listed first
-- [ ] Tests added and passing
+- [x] Cart grouped by fulfilment
+- [x] Pay-by-bank listed first
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.
