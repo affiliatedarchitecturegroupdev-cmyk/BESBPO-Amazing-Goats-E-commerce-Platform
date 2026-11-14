@@ -11,5 +11,6 @@ import { InMemoryCycleStore } from './cycle.store';
     CycleScheduler,
     { provide: CYCLE_STORE, useFactory: () => new InMemoryCycleStore() },
   ],
+  exports: [CYCLE_STORE],
 })
 export class CyclesModule {}
