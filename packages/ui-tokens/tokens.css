@@ -1,0 +1,2 @@
+:root{--forest:#1F3B2D;--kalahari:#B4492B;--cream:#F4ECD8;--ochre:#D6A23E;--charcoal:#25231F;--radius-card:20px;--radius-button:10px;--font-display:Fraunces,Georgia,serif;--font-body:Inter,system-ui,sans-serif}
+.strip{height:16px;background:repeating-linear-gradient(135deg,var(--ochre) 0 14px,var(--kalahari) 14px 28px,var(--forest) 28px 42px)}

@@ -1,0 +1,1 @@
+Brand palette: forest #1F3B2D, Kalahari red #B4492B, cream #F4ECD8, ochre #D6A23E, charcoal #25231F. Display type: bold italic serif (Fraunces), body: Inter. The triangle strip pattern runs along the base of boxes, vehicles and pages. Tokens: `packages/ui-tokens`. Use the pattern at edges and bases only, never behind text. Final logo artwork is supplied by the designer.

@@ -1,0 +1,123 @@
+{
+  "name": "amazing-goats",
+  "region": "africa-south (Johannesburg)",
+  "note": "Use Northflank managed cloud in Johannesburg. Add Postgres and Redis addons in the same project. Human approval required for any change to this file.",
+  "addons": [
+    {
+      "name": "ag-postgres",
+      "type": "postgresql",
+      "version": "16"
+    },
+    {
+      "name": "ag-redis",
+      "type": "redis"
+    }
+  ],
+  "services": [
+    {
+      "name": "gateway",
+      "port": 3000,
+      "build": "services/gateway/Dockerfile",
+      "healthcheck": "/health",
+      "replicas": {
+        "min": 1,
+        "max": 4
+      }
+    },
+    {
+      "name": "commerce",
+      "port": 3001,
+      "build": "services/commerce/Dockerfile",
+      "healthcheck": "/health",
+      "replicas": {
+        "min": 1,
+        "max": 4
+      }
+    },
+    {
+      "name": "stock",
+      "port": 3002,
+      "build": "services/stock/Dockerfile",
+      "healthcheck": "/health",
+      "replicas": {
+        "min": 1,
+        "max": 4
+      }
+    },
+    {
+      "name": "accounts",
+      "port": 3003,
+      "build": "services/accounts/Dockerfile",
+      "healthcheck": "/health",
+      "replicas": {
+        "min": 1,
+        "max": 4
+      }
+    },
+    {
+      "name": "logistics",
+      "port": 3004,
+      "build": "services/logistics/Dockerfile",
+      "healthcheck": "/health",
+      "replicas": {
+        "min": 1,
+        "max": 4
+      }
+    },
+    {
+      "name": "payments",
+      "port": 3005,
+      "build": "services/payments/Dockerfile",
+      "healthcheck": "/health",
+      "replicas": {
+        "min": 1,
+        "max": 4
+      }
+    },
+    {
+      "name": "notifications",
+      "port": 3006,
+      "build": "services/notifications/Dockerfile",
+      "healthcheck": "/health",
+      "replicas": {
+        "min": 1,
+        "max": 4
+      }
+    },
+    {
+      "name": "ads",
+      "port": 3007,
+      "build": "services/ads/Dockerfile",
+      "healthcheck": "/health",
+      "replicas": {
+        "min": 1,
+        "max": 4
+      }
+    },
+    {
+      "name": "partners",
+      "port": 3008,
+      "build": "services/partners/Dockerfile",
+      "healthcheck": "/health",
+      "replicas": {
+        "min": 1,
+        "max": 4
+      }
+    },
+    {
+      "name": "identity",
+      "port": 3009,
+      "build": "services/identity/Dockerfile",
+      "healthcheck": "/health",
+      "replicas": {
+        "min": 1,
+        "max": 4
+      }
+    },
+    {
+      "name": "storefront",
+      "port": 3100,
+      "build": "apps/storefront/Dockerfile"
+    }
+  ]
+}

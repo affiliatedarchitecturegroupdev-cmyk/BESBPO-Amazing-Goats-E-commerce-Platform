@@ -1,0 +1,9 @@
+{
+  "name": "Amazing Goats Driver",
+  "short_name": "AG Driver",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4ECD8",
+  "theme_color": "#1F3B2D",
+  "icons": []
+}
