@@ -1,5 +1,8 @@
 name: agent-gate
-on: [pull_request]
+on:
+  pull_request:
+    # Re-evaluate when the human-approved label is added or removed.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 jobs:
   gate:
     runs-on: ubuntu-latest
