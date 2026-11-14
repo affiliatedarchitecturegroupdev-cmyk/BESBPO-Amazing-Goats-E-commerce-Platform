@@ -1,13 +1,15 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { RequirePermissions } from '@ag/nest-auth';
 import { TraceabilityService } from './traceability.service';
+import { BatchTrace } from './traceability.domain';
 
-// TODO(agent): implement per tasks/ backlog. Keep every route behind RequirePermissions.
 @Controller('stock/traceability')
 export class TraceabilityController {
   constructor(private readonly service: TraceabilityService) {}
 
-  @Get()
+  @Get(':batchId')
   @RequirePermissions('stock:read')
-  list() { return this.service.list(); }
+  trace(@Param('batchId') batchId: string): Promise<BatchTrace> {
+    return this.service.trace(batchId);
+  }
 }
