@@ -1,6 +1,15 @@
 import { Module } from '@nestjs/common';
 import { WebhooksController } from './webhooks.controller';
-import { WebhooksService } from './webhooks.service';
+import { WebhooksService, WEBHOOK_STORE } from './webhooks.service';
+import { InMemoryWebhookStore } from './webhooks.store';
+import { IntentsModule } from '../intents/intents.module';
 
-@Module({ controllers: [WebhooksController], providers: [WebhooksService] })
+@Module({
+  imports: [IntentsModule],
+  controllers: [WebhooksController],
+  providers: [
+    WebhooksService,
+    { provide: WEBHOOK_STORE, useFactory: () => new InMemoryWebhookStore() },
+  ],
+})
 export class WebhooksModule {}
