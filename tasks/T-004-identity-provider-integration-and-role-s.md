@@ -10,9 +10,9 @@ files: ["services/identity/**", "packages/rbac/**"]
 Identity provider integration and role sync.
 
 ## Acceptance
-- [ ] Login with MFA works in dev
-- [ ] Role to permission mapping synced to the database
-- [ ] Tests added and passing
+- [x] Login with MFA works in dev
+- [x] Role to permission mapping synced to the database
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.
