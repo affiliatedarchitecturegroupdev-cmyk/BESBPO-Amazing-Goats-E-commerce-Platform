@@ -1,0 +1,32 @@
+# Agent instructions (OpenHands, Claude Code, any agent)
+
+## Mission
+Build the Amazing Goats platform from `tasks/BACKLOG.md`, one task card at a time, with a human reviewer in the loop.
+
+## Ground rules
+1. Work only on the task card you were given. Read its `files`, `acceptance` and `gate` fields first.
+2. Branch name: `agent/<task-id>-<slug>`. Never push to `main`. Open a PR using the template.
+3. Write or update tests with every change. Run `pnpm -r test` and `pnpm -r lint` (TypeScript) or `pytest` (Python services) before opening a PR.
+4. Money is integer cents (ZAR). Times are stored in UTC and shown in Africa/Johannesburg. Prices in the database exclude VAT; VAT (15%) is added at display and invoice time.
+5. Every table, endpoint and screen must respect RBAC (`packages/rbac`). Use `@RequirePermissions(...)` on every controller route.
+6. Never read or write `.env`, secrets, or production data. Use `.env.example` and seed data.
+7. No new dependency, no schema migration edit after merge, and no change to gated paths without the human approval label.
+
+## Human approval gates (label `human-approved` required to merge)
+- `db/migrations/**` (new migrations are fine as PRs; edits to merged files are forbidden)
+- `packages/rbac/**`, auth, session and identity code
+- `services/payments/**` and any money movement, refunds, payouts, reconciliation
+- `services/accounts/**` credit limits, tiering and collections logic
+- pricing, VAT and promotion logic in `services/commerce/**`
+- `infra/**`, `.github/**`, deployment and environment configuration
+- legal and regulatory text: terms, privacy, labels, ad policy, compliance copy
+- anything that sends email, WhatsApp or SMS to real people
+
+## Definition of done
+Tests pass, lint passes, docs updated if behaviour changed, PR description lists what changed, risks, and how to verify. For UI work include a screenshot or wireframe reference from `docs/wireframes/index.html`.
+
+## Compliance reminders
+POPIA (consent, minimal personal data, access logging), Consumer Protection Act, R146 food labelling and advertising rules, Agricultural Product Standards Act packing and marking, Meat Safety Act. See `docs/07-compliance.md`. If unsure, stop and ask in the PR.
+
+## Style
+TypeScript strict, small modules, pure functions for business rules, DTO validation with class-validator, OpenAPI for every service, conventional commits.

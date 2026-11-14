@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en-ZA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Amazing Goats platform wireframes v2</title>
+<style>
+:root{--forest:#1F3B2D;--red:#B4492B;--cream:#F4ECD8;--ochre:#D6A23E;--bg:#FBF7EC;--sf:#fff;--tx:#25231F;--mu:#5d584d;--bd:#e3d9c0}
+@media(prefers-color-scheme:dark){:root{--bg:#111a15;--sf:#1a2a21;--tx:#F4ECD8;--mu:#b9b19c;--bd:#2c4033}}
+*{box-sizing:border-box}body{margin:0;font:14px/1.5 Inter,system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+header{background:var(--forest);color:var(--cream);padding:12px 16px}header b{font:italic 700 18px Georgia,serif}
+.apps,.scrs{display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px}.apps button,.scrs button{border:1px solid var(--bd);background:var(--sf);color:var(--tx);padding:6px 12px;border-radius:99px;cursor:pointer}
+.apps button.on{background:var(--forest);color:var(--cream)}.scrs button.on{background:var(--red);color:#fff;border-color:var(--red)}
+.note{max-width:760px;margin:0 auto;padding:0 16px;color:var(--mu);font-size:13px}
+.frame{margin:12px auto 40px;border:2px solid var(--bd);border-radius:22px;padding:12px;background:var(--bg);width:min(100% - 24px,380px)}.frame.wide{width:min(100% - 24px,760px)}
+.bar{display:flex;gap:8px;align-items:center;margin-bottom:8px}.bar b{font:italic 700 17px Georgia,serif;color:var(--red)}.bar span{margin-left:auto;background:var(--forest);color:var(--cream);border-radius:99px;padding:1px 10px;font-size:12px}
+.ban{background:var(--ochre);color:var(--forest);border-radius:10px;padding:7px 10px;margin-bottom:8px;font-size:13px}
+.card{border:1px solid var(--bd);border-radius:14px;padding:9px;background:var(--sf);margin-bottom:8px}.card small{color:var(--mu)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.wide .grid{grid-template-columns:repeat(3,1fr)}
+.tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:99px;background:var(--cream);color:var(--forest)}.tag.ad{background:var(--ochre)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.chips i{font-style:normal;border:1px solid var(--bd);border-radius:99px;padding:2px 10px;font-size:12px;background:var(--sf)}.chips i.on{background:var(--red);color:#fff;border-color:var(--red)}
+.btn{display:block;text-align:center;background:var(--red);color:#fff;border-radius:10px;padding:9px;font-weight:600;margin:6px 0}.btn.o{background:none;border:1.5px solid var(--forest);color:var(--tx)}
+.row{display:flex;justify-content:space-between;gap:8px;padding:3px 0}.h{font-weight:600;margin:10px 0 4px}.p{color:var(--mu);font-size:13px}
+.img{height:84px;border-radius:10px;border:1px dashed var(--bd);display:grid;place-items:center;color:var(--mu);font-size:12px;background:repeating-linear-gradient(135deg,#1F3B2D18,#1F3B2D18 8px,#1F3B2D0a 8px,#1F3B2D0a 16px);margin-bottom:6px}
+.fld{border:1px solid var(--bd);border-radius:8px;padding:7px 9px;color:var(--mu);font-size:12px;margin:5px 0;background:var(--sf)}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px}.wide .kpi{grid-template-columns:repeat(4,1fr)}.kpi div{border:1px solid var(--bd);border-radius:12px;padding:8px;background:var(--sf)}.kpi b{display:block;font-size:18px}
+.meter{height:10px;border-radius:6px;background:var(--bd);overflow:hidden;margin:4px 0}.meter i{display:block;height:100%;background:var(--forest)}
+table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;color:var(--mu);font-weight:500;border-bottom:1px solid var(--bd);padding:4px 3px}td{padding:5px 3px;border-bottom:1px solid var(--bd)}
+.nav{display:flex;justify-content:space-around;border-top:1px solid var(--bd);padding-top:8px;margin-top:8px;font-size:11px;color:var(--mu)}
+.ad{border:2px dashed var(--ochre);border-radius:10px;padding:6px;margin-bottom:8px;font-size:12px;text-align:center;color:var(--mu)}
+</style></head><body>
+<header><b>Amazing Goats</b> platform wireframes v2 <span style="opacity:.7">| all apps, mobile first, prices shown as R --- until set</span></header>
+<div class="apps" id="apps"></div><div class="scrs" id="scrs"></div><p class="note" id="note"></p><div id="stage"></div>
+<script>
+const S=[];const scr=(id,app,title,note,blocks,wide)=>S.push({id,app,title,note,blocks,wide});
+const FT=(t)=>t;
+// ===== STOREFRONT =====
+scr('sf-home','Storefront','Home','Updated: corporate link in header, cut-off banner, ad slots A1 A2 A4, merchandising, dairy and produce.',[
+['bar','Amazing Goats','2'],['chips',['Lamb','Boxes','Chicken','Eggs','Dairy','Produce','Live animals','Braai'],0],
+['chips',['About us (corporate site)','Trade','Track order'],-1],
+['ban','Order by Sunday 17:00 for Wednesday delivery · 26 h left'],
+['ad','A1 Hero carousel: brand banner (Sponsored)'],['card','Full lamb box','About 17 kg · delivered chilled','Pre-order'],
+['h','Ready-made bundles'],['grid',[['Braai box','Pre-order'],['Potjie box','Pre-order'],['Family freezer box','Pre-order'],['Weekly essentials','Subscribe']]],
+['h','Shop by occasion'],['grid',[['Braai day',''],['Ceremony',''],['Eid and Easter',''],['Heritage Day','']]],
+['ad','A2 Mid-page band: promotion (Sponsored)'],['h','Weekly specials'],['grid',[['Lamb chops','Special'],['Eggs tray','Special']]],
+['h','Bakery and caterers'],['card','Eggs and dairy for bakeries','Early delivery 04:00 to 07:00 · standing orders','Trade'],
+['h','Sponsored brands'],['grid',[['Charcoal brand','Sponsored'],['Spice brand','Sponsored']]],
+['nav',['Home','Shop','Boxes','Account','Cart']]]);
+scr('sf-category','Storefront','Category: Lamb','Filters, fulfilment tags, sponsored tiles (A3, A4 at positions 3, 7, 11), badges.',[
+['bar','Lamb','2'],['ad','A3 Category sponsor banner'],['chips',['All cuts','Boxes','Braai','Potjie','Halaal','Pack size'],0],
+['row','24 products','Sort: Popular'],['grid',[['Lamb loin chops 400 g','Pre-order · Wed'],['Lamb shanks','Pre-order · Wed'],['Sponsored: spice rub','Sponsored'],['Lamb mince 500 g','Pre-order · Wed']]],
+['p','Badges: Farm direct, Halaal option, Low stock. Max one sponsored tile in five.'],['nav',['Home','Shop','Boxes','Account','Cart']]]);
+scr('sf-product','Storefront','Product: Full lamb box','Slot picker, compliance panel, traceability QR, subscribe, sponsored strip A6.',[
+['bar','Full lamb box','2'],['img','Gallery: swipe'],['chips',['Pre-order','Halaal option','Farm direct'],-1],['row','R ---','R --- per kg'],
+['h','Delivery slot'],['chips',['Wed 15 Nov','Thu 16 Nov','Next week'],0],['p','Order by Sunday 17:00. Delivered chilled in an insulated branded box.'],
+['row','Subscribe and save','Off'],['btn','Add to cart'],['btn','Reserve for ceremony (quote)','o'],
+['h','What is in the box'],['p','Leg, shoulder, chops, ribs, neck, shanks, potjie, mince'],
+['h','Compliance and traceability'],['card','Batch L-1108','Slaughtered 06 Nov · class A · packed at approved premises · use by shown on pack','QR'],
+['h','Cut guide and storage'],['p','Keep at 0 to 4°C or freeze on arrival.'],['ad','A6 Frequently bought with (Sponsored)']]);
+scr('sf-search','Storefront','Search results','Typo tolerance, filters, sponsored top 2 (A5), did you mean.',[
+['bar','Search','2'],['fld','lamb chpos'],['p','Did you mean: lamb chops?'],['ad','A5 Sponsored result 1'],['ad','A5 Sponsored result 2'],
+['chips',['Lamb','Chicken','Eggs','Dairy','Under R300','Halaal'],-1],['grid',[['Lamb loin chops','Pre-order'],['Lamb rib chops','Pre-order']]]]);
+scr('sf-cart','Storefront','Cart','Grouped by how items travel. Cross-sell A7. Savings and delivery fee by zone.',[
+['bar','Cart','3'],['h','Chilled: Wed 15 Nov'],['card','Full lamb box','Qty 1','R ---'],['card','Lamb loin chops 400 g','Qty 2','R ---'],
+['h','Ambient: courier'],['card','Spice rub 200 g','Qty 1','R ---'],['h','Live animals'],['p','Reservations are paid as a deposit at checkout.'],
+['ad','A7 Cross-sell: add charcoal (Sponsored)'],['row','Subtotal','R ---'],['row','Delivery (zone 2)','R ---'],['row','VAT','R ---'],['row','Total','R ---'],
+['row','Gift card or promo code','Apply'],['btn','Checkout']]);
+scr('sf-checkout','Storefront','Checkout','Pay by bank first (cheaper, small discount), cards, wallets, BNPL, deposits, escrow for large deals.',[
+['bar','Checkout',''],['h','1 Contact'],['fld','Guest or sign in · phone · email'],['h','2 Delivery'],['fld','Address · zone check · slot'],
+['h','3 Payment'],['card','Pay by bank (Capitec Pay, PayShap, Instant EFT)','1% discount','Recommended'],['card','Card','Peach with PayFast fallback',''],['card','Wallets and pay later','Payflex, Float, MoreTyme, Mobicred',''],['card','Deposit','For live-animal reservations',''],
+['h','4 Review'],['fld','Summary · VAT invoice · terms and privacy consent'],['btn','Place order'],['p','Trade accounts: pay on account, EFT, or LulaPay terms. Orders above R10,000 can use TradeSafe escrow.']]);
+scr('sf-merch','Storefront','Occasion hub: Braai day','Merchandising sections and bundles for boxes and occasions.',[
+['bar','Braai day',''],['img','Hero: braai'],['h','Bundles'],['grid',[['Braai box','Pre-order'],['Family braai','Pre-order']]],['h','Cooking method'],['chips',['Braai','Potjie','Roast','Slow cook'],0],
+['h','Budget'],['chips',['Under R200','Under R500','Under R1,000'],-1],['h','Sponsored'],['ad','A4 tiles: charcoal, spice'],['h','Recipes'],['card','Lamb chops on the braai','10 min read',''],['btn','Build your own braai box','o']]);
+scr('sf-produce','Storefront','Dairy and produce','New lines. Pre-order by route day. Bakery egg programme entry.',[
+['bar','Dairy and produce','2'],['chips',['Eggs','Milk and maas','Butter and cheese','Vegetables','Herbs','Soup packs'],0],
+['grid',[['Eggs tray 30 (large)','Pre-order'],['Butter 500 g','Pre-order'],['Potatoes 10 kg','Pre-order'],['Onions 10 kg','Pre-order']]],
+['card','For bakeries','Eggs, butter, cream, early delivery, weekly standing orders','Apply for trade'],['p','Eggs and produce come from compliant packers only.']]);
+scr('sf-recipes','Storefront','Recipes and cut guide','Content, calculator, sponsored ingredient A9.',[
+['bar','Recipes',''],['card','How much meat for N guests','Calculator',''],['fld','Guests: 12 · Meal: braai'],['row','Suggested','About 7 kg lamb'],['ad','A9 Sponsored ingredient'],['h','Cut guide'],['p','Which cut, how to cook, how to store.']]);
+scr('sf-track','Storefront','Track my order','Live status, driver ETA, temperature, thank-you offer A8.',[
+['bar','Order #2041',''],['chips',['Confirmed','Packing','Out for delivery','Delivered'],2],['card','Driver ETA 10:40','Temperature 3.2°C',''],['row','Slot','Wed 08:00 to 11:00'],['btn','Message us on WhatsApp','o'],['ad','A8 Thank-you offer (Sponsored)']]);
+scr('sf-account','Storefront','Account','Orders, reorder, subscriptions, addresses, invoices, loyalty.',[
+['bar','My account',''],['btn','Reorder last box'],['h','Subscriptions'],['card','Weekly essentials box','Every week · next Wed','Pause'],['h','Orders'],['card','#2041','Delivered','Invoice'],['h','Loyalty'],['meter',60,'60 of 100 points'],['nav',['Orders','Subscriptions','Addresses','Invoices','Help']]]);
+scr('sf-delivery','Storefront','Delivery zones and slots','Zone checker, fees, route days.',[
+['bar','Delivery',''],['fld','Enter your suburb'],['tbl',['Zone','Where','Fee'],[['1','Within 30 km','Free on route days'],['2','Durban and Pietermaritzburg','R ---'],['3','Coasts','R ---']]],['p','Route days: Mon North Coast, Tue South Coast, Wed Durban, Thu Midlands.']]);
+scr('sf-trade-entry','Storefront','Trade entry','Entry point for businesses.',[
+['bar','Trade',''],['card','Run a business?','Trade prices, standing orders, credit terms',''],['btn','Apply for a trade account'],['btn','Log in to the trade portal','o'],['card','Bakeries and caterers','Early delivery and eggs programme','']]);
+// ===== TRADE PORTAL =====
+scr('tp-apply','Trade portal','Apply for an account','Turnover declaration, documents, credit request, consent.',[
+['bar','Trade account','Step 2 of 5'],['chips',['Butchery','Restaurant','Retail store','Bakery','Caterer','Trader'],0],['fld','Registered name · registration no. · VAT no.'],['fld','Turnover and asset declaration'],
+['h','Estimated weekly volumes'],['row','Lamb carcasses','5'],['row','Chicken (kg)','40'],['row','Egg trays','20'],['h','Documents'],['chips',['Company registration','VAT certificate','Certificate of Acceptability','Bank letter'],-1],
+['fld','Credit requested and terms'],['p','Directors consent to a credit check (POPIA).'],['btn','Submit application']]);
+scr('tp-dashboard','Trade portal','Dashboard','Credit tier, next delivery, repeat order.',[
+['bar','Welcome back','Standard'],['card','Credit available','R --- of R ---',''],['meter',62,'62% used'],['card','Next delivery','Wed 04:00 to 07:00 (bakery slot)',''],['btn','Repeat last order'],['btn','New order','o'],['h','Alerts'],['card','Invoice due in 3 days','','Pay']]);
+scr('tp-order','Trade portal','Quick order','Order by code or spreadsheet upload. Bakery egg programme.',[
+['bar','Trade order','Cut-off Sun'],['chips',['By code','Upload CSV','Lamb','Eggs','Dairy'],2],['row','AG-LB-001 Lamb carcass','2'],['row','AG-EG-003 Eggs XL tray','20'],['row','Order total (ex VAT)','R ---'],['btn','Place order on account'],['btn','Save as standing order','o']]);
+scr('tp-standing','Trade portal','Standing orders','Weekly grid with pause and skip. Locks at cut-off.',[
+['bar','Standing orders',''],['tbl',['Day','Items',''],[['Mon','2 lamb carcasses','Edit'],['Wed','20 egg trays','Edit'],['Fri','1 lamb carcass','Edit']]],['chips',['Pause a week','Skip a delivery'],-1]]);
+scr('tp-statements','Trade portal','Statements and disputes','Ageing, invoices, 24 hour dispute window with photos and temperature.',[
+['bar','Statements',''],['row','Balance','R ---'],['tbl',['Invoice','Due','Status'],[['INV-0412','14 Nov','Pay'],['INV-0406','07 Nov','Paid']]],['btn','Open a dispute (photo and temperature)','o'],['btn','Download VAT invoices','o']]);
+scr('tp-credit','Trade portal','Credit tier','Ladder progress and LulaPay option.',[
+['bar','Credit',''],['chips',['New','Probation','Standard','Preferred'],2],['meter',50,'3 of 6 clean months to Preferred'],['card','Longer terms with LulaPay','Pay in 30 to 60 days, we are paid now','Pilot'],['p','Limits are reviewed monthly.']]);
+scr('tp-team','Trade portal','Team and approvals','Multiple users and approval rules.',[
+['bar','Team',''],['tbl',['Name','Role',''],[['Owner','Owner',''],['Buyer','Buyer','Limit R ---'],['Accounts','Accounts','Invoices only']]],['btn','Invite a user']]);
+// ===== ADMIN =====
+scr('ad-dashboard','Admin','Dashboard','Permission-driven menu. Alerts for temperature, stock, overdue accounts.',[
+['kpi',[['38','Orders today'],['26 h','To cut-off'],['82%','Slaughter slot booked'],['R ---','Revenue today']]],['h','Alerts'],['card','Van 2 above 5°C','','Check'],['card','Lamb chops low stock','','Reorder'],['card','3 accounts overdue','','Review'],['h','Today routes'],['tbl',['Route','Vehicle','Stops'],[['North Coast','Van 1','12'],['Durban','Truck 1','18']]]],true);
+scr('ad-orders','Admin','Orders','Queues, pick lists, route assignment.',[
+['chips',['New 12','Packing 9','Out 14','Delivered'],0],['tbl',['Order','Customer','Slot','Status'],[['#2041','Trade A','Wed am','New'],['#2042','Household','Wed pm','New'],['#2043','Trader','Thu','Packing']]],['btn','Print pick lists'],['btn','Assign to route','o']],true);
+scr('ad-cycles','Admin','Cut-off cycles','Cycle manager: capacity, cut-off, top-up, early close.',[
+['tbl',['Cycle','Cut-off','Trade lock','Top-up','Capacity','Status'],[['Chilled wk 46','Sun 17:00','Sun 12:00','Mon 12:00','82%','Open'],['Eggs wk 46','Mon 04:00','','','40%','Open']]],['row','Early close when full','On'],['btn','Close cycle now'],['btn','Create purchase orders and pick lists','o']],true);
+scr('ad-batches','Admin','Stock and batches','Traceability record per batch.',[
+['tbl',['Batch','Product','Slaughter','Use by','Temp','Status'],[['L-1108','Lamb carcass','06 Nov','16 Nov','OK','Released'],['L-1109','Loin chops','06 Nov','14 Nov','Watch','Held']]],['fld','Source farm · abattoir · weight · grade · halaal'],['btn','Add batch']],true);
+scr('ad-recalls','Admin','Recalls','Find all affected orders by batch. Quality role only.',[
+['fld','Batch to recall: L-1109'],['kpi',[['14','Orders affected'],['9','Customers notified']]],['btn','Open recall'],['p','Every recall writes an audit entry.']],true);
+scr('ad-routes','Admin','Routes and slots','Route days, vehicle, capacity, stops, temperature log.',[
+['tbl',['Day','Area','Vehicle','Capacity'],[['Mon','North Coast','Van 1','75%'],['Wed','Durban','Truck 1','62%']]],['btn','Open route map','o'],['p','Driver, proof of delivery and temperature per stop.']],true);
+scr('ad-pricing','Admin','Pricing','Price lists by audience, margin warnings, two-person publish.',[
+['chips',['Public','Trader','Trade A','Trade B','Bakery'],0],['tbl',['Product','Cost','Price','Margin'],[['Lamb carcass','R ---','R ---','OK'],['Chicken case','R ---','R ---','Low']]],['row','Prices exclude VAT','Toggle'],['btn','Submit for approval']],true);
+scr('ad-merch','Admin','Merchandising manager','Sections, order, schedule, badges.',[
+['tbl',['Section','Page','Order','Schedule'],[['Hero carousel','Home','1','Always'],['Weekly specials','Home','4','Mon to Sun'],['Festive hamper','Home','2','1 Dec to 24 Dec']]],['btn','Add section']],true);
+scr('ad-accounts','Admin','Trade accounts','Approval queue with document check, limit and terms.',[
+['chips',['Pending 5','Active 48','On hold 2'],0],['card','Greenfield Butchery','Documents 4 of 4 · est. weekly R ---','Review'],['row','Credit limit','R ---'],['row','Terms','14 days'],['btn','Approve (second approver above threshold)'],['btn','Request information','o']],true);
+scr('ad-credit','Admin','Credit control','Ageing, collections steps, holds, concentration.',[
+['kpi',[['R ---','Receivables'],['14 days','DSO'],['1.0%','Bad debt'],['9%','Top-1 exposure']]],['tbl',['Account','Days late','Step'],[['Trade A','8','Call'],['Trade C','15','Hold']]],['p','Steps: reminder, due, +1, +7 call, +14 hold, +30 demand.']],true);
+scr('ad-payments','Admin','Payments and reconciliation','Provider status, fees, settlements, refunds.',[
+['tbl',['Provider','Today','Fees','Settled'],[['Peach','R ---','R ---','Matched'],['PayFast','R ---','R ---','Matched'],['Stitch','R ---','R ---','Pending']]],['btn','Approve refund (second approver)','o']],true);
+scr('ad-roles','Admin','Roles and access','Matrix of roles and permissions. Changes need a second approver.',[
+['tbl',['Role','Orders','Pricing','Credit','PII','Roles'],[['Chief admin','W','W+A','W+A','R','W'],['Executive','R','A','A','R',''],['Credit controller','R','','W','R',''],['Developer','','','','','']]],['btn','Request elevation (time limited)','o'],['p','Break-glass use alerts the board.']],true);
+scr('ad-audit','Admin','Audit log','Append-only. Filter by actor, entity, date.',[
+['fld','Filter: entity = price_list'],['tbl',['When','Who','Action','Approved by'],[['10:02','Sales A','price edit','Exec B'],['09:40','Support C','refund request','Finance D']]]],true);
+scr('ad-ads','Admin','Ads manager','Review queue, slots, advertiser contracts.',[
+['tbl',['Campaign','Slot','Evidence','Status'],[['Charcoal brand','A4','Uploaded','Review'],['Dairy brand','A2','Missing','Rejected']]],['btn','Approve creative'],['p','Rules: Sponsored label, no health claims, max 2 per view, human review.']],true);
+scr('ad-partners','Admin','Partners and purchase orders','Abattoir slots, farm purchase orders, certificate expiry.',[
+['tbl',['Partner','Slot','Booked','Cert'],[['Abattoir A','Mon','82%','Valid'],['Egg farm B','Tue','40%','Expires 30 d']]],['btn','Create purchase order']],true);
+scr('ad-reports','Admin','Reports','Sales, margin by line, cut-off performance, delivery KPIs.',[
+['kpi',[['R ---','Revenue'],['R ---','Gross margin'],['96%','On-time delivery'],['0.4%','Spoilage']]]],true);
+// ===== DRIVER =====
+scr('dr-daypack','Driver app','Day pack','Offline first. Downloaded each morning.',[
+['bar','Wed Durban','Offline'],['meter',100,'Day pack downloaded 05:40'],['tbl',['#','Stop','Window'],[['1','Cafe A','08:00'],['2','Bakery B','08:30']]],['btn','Start route']]);
+scr('dr-stop','Driver app','Stop','Customer, items, instructions.',[
+['bar','Stop 2: Bakery B',''],['card','20 egg trays','Back door, ring bell',''],['btn','Arrived'],['btn','Delivered'],['btn','Refused','o']]);
+scr('dr-proof','Driver app','Proof and temperature','Signature, photo, probe reading, cash.',[
+['bar','Proof',''],['fld','Signature'],['fld','Photo of drop'],['row','Probe','3.4°C'],['row','Cash taken','R ---'],['btn','Save (queued offline)']]);
+scr('dr-sync','Driver app','Sync status','Queue syncs when signal returns.',[
+['bar','Sync','Offline'],['card','7 events waiting','Last sync 06:10',''],['p','Driver events win for delivery status. Server wins for order content.'],['btn','Sync now']]);
+// ===== ADVERTISER / PARTNER =====
+scr('av-dashboard','Advertiser portal','Dashboard','Own campaigns only.',[
+['bar','Campaigns',''],['kpi',[['12k','Impressions'],['340','Clicks'],['R ---','Spend'],['R ---','Attributed sales']]],['btn','New campaign']]);
+scr('av-builder','Advertiser portal','Campaign builder','Goal, budget, dates, targeting, creative, claims evidence.',[
+['bar','New campaign',''],['fld','Goal and budget'],['fld','Slot (A1 to A12) and pricing (flat, CPC, CPM)'],['fld','Targeting: category, region, buyer type'],['fld','Creative upload and claims evidence'],['p','No health claims. Human review before go-live.'],['btn','Submit for review']]);
+scr('av-wallet','Advertiser portal','Wallet and billing','Prepaid wallet through the payment aggregators.',[
+['bar','Wallet',''],['row','Balance','R ---'],['btn','Top up'],['tbl',['Date','Item','Amount'],[['10 Nov','Top up','R ---'],['11 Nov','Spend','R ---']]]]);
+scr('pt-slots','Partner portal','Slots','Abattoir confirms slaughter slots, halaal flag.',[
+['bar','Slots',''],['tbl',['Date','Capacity','Booked'],[['Mon','120','98'],['Tue','120','40']]],['btn','Confirm slot']]);
+scr('pt-orders','Partner portal','Purchase orders','Farm sees purchase orders and grades.',[
+['bar','Orders',''],['card','PO-118','200 broilers · Wed','Confirm'],['btn','Upload grading sheet','o']]);
+scr('pt-docs','Partner portal','Documents','Certificates with expiry alerts.',[
+['bar','Documents',''],['tbl',['Document','Expires','Status'],[['Pack station certificate','30 Mar','Valid'],['Halaal certificate','12 Jan','Valid']]],['btn','Upload']]);
+// ===== render =====
+const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function blk(b){const t=b[0];
+ if(t==='bar')return `<div class="bar"><b>${esc(b[1])}</b>${b[2]?`<span>${esc(b[2])}</span>`:''}</div>`;
+ if(t==='ban')return `<div class="ban">${esc(b[1])}</div>`;
+ if(t==='h')return `<div class="h">${esc(b[1])}</div>`;
+ if(t==='p')return `<div class="p">${esc(b[1])}</div>`;
+ if(t==='chips')return `<div class="chips">${b[1].map((c,i)=>`<i class="${i===b[2]?'on':''}">${esc(c)}</i>`).join('')}</div>`;
+ if(t==='row')return `<div class="row"><span>${esc(b[1])}</span><span>${esc(b[2])}</span></div>`;
+ if(t==='card')return `<div class="card"><b>${esc(b[1])}</b>${b[3]?` <span class="tag">${esc(b[3])}</span>`:''}<br><small>${esc(b[2])}</small></div>`;
+ if(t==='grid')return `<div class="grid">${b[1].map(g=>`<div class="card"><div class="img">Photo</div><b>${esc(g[0])}</b><br>${g[1]?`<span class="tag ${/Sponsored/.test(g[1])?'ad':''}">${esc(g[1])}</span>`:''}</div>`).join('')}</div>`;
+ if(t==='btn')return `<div class="btn ${b[2]||''}">${esc(b[1])}</div>`;
+ if(t==='tbl')return `<table><tr>${b[1].map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${b[2].map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`;
+ if(t==='kpi')return `<div class="kpi">${b[1].map(k=>`<div><b>${esc(k[0])}</b><small>${esc(k[1])}</small></div>`).join('')}</div>`;
+ if(t==='meter')return `<div class="p">${esc(b[2])}</div><div class="meter"><i style="width:${b[1]}%"></i></div>`;
+ if(t==='fld')return `<div class="fld">${esc(b[1])}</div>`;
+ if(t==='ad')return `<div class="ad">${esc(b[1])}</div>`;
+ if(t==='img')return `<div class="img">${esc(b[1])}</div>`;
+ if(t==='nav')return `<div class="nav">${b[1].map(n=>`<span>${esc(n)}</span>`).join('')}</div>`;
+ return '';}
+const apps=[...new Set(S.map(s=>s.app))];let cur=null;
+function show(id){const s=S.find(x=>x.id===id)||S[0];cur=s;location.hash=s.id;
+ document.querySelectorAll('#apps button').forEach(b=>b.classList.toggle('on',b.dataset.a===s.app));
+ document.getElementById('scrs').innerHTML=S.filter(x=>x.app===s.app).map(x=>`<button data-s="${x.id}" class="${x.id===s.id?'on':''}">${esc(x.title)}</button>`).join('');
+ document.getElementById('note').textContent=s.title+': '+s.note;
+ document.getElementById('stage').innerHTML=`<div class="frame ${s.wide?'wide':''}">${s.blocks.map(blk).join('')}</div>`;}
+document.getElementById('apps').innerHTML=apps.map(a=>`<button data-a="${a}">${a}</button>`).join('');
+document.getElementById('apps').onclick=e=>{const a=e.target.dataset.a;if(a)show(S.find(s=>s.app===a).id)};
+document.getElementById('scrs').onclick=e=>{const s=e.target.dataset.s;if(s)show(s)};
+show(location.hash.slice(1)||S[0].id);
+</script></body></html>

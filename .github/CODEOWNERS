@@ -1,0 +1,9 @@
+# Replace handles with real owners. Gated paths require an owner review.
+*                              @ag/dev-lead
+/db/migrations/                @ag/dev-lead @ag/chief-admin
+/packages/rbac/                @ag/dev-lead @ag/chief-admin
+/services/payments/            @ag/dev-lead @ag/finance-lead
+/services/accounts/            @ag/dev-lead @ag/finance-lead
+/infra/                        @ag/devops
+/.github/                      @ag/devops
+/docs/07-compliance.md         @ag/compliance

@@ -1,0 +1,3 @@
+# Offline driver app
+Progressive web app first. Day pack (stops, orders, notes, contacts) downloaded each morning. Every action is queued locally (`apps/driver-pwa/lib/offline-queue.ts`) and synced when signal returns (`lib/sync.ts`, tested).
+Conflict rule: driver delivery events win for delivery status; the server wins for order content. Offline maps for the route, Bluetooth temperature probes attached to each stop, proof-of-delivery PDF generated on the device, PIN login with a short-lived offline token, encrypted local storage, remote wipe, data cleared when the day closes. Events carry client-generated UUIDs so syncing twice is safe (`logistics.sync_events`).

@@ -1,0 +1,8 @@
+# Koyeb deployment for analytics and other non-core services (staging, previews, accounting sync, reporting).
+name: ag-analytics
+service:
+  type: web
+  docker: { dockerfile: services/analytics/Dockerfile }
+  ports: [{ port: 8000, protocol: http }]
+  health_checks: [{ http: { path: /health, port: 8000 } }]
+  env: [{ key: DATABASE_URL, secret: ag-analytics-db-url }]

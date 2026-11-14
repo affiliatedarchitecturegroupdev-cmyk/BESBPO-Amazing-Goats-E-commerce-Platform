@@ -1,0 +1,19 @@
+name: agent-gate
+on:
+  pull_request:
+    # Re-evaluate when the human-approved label is added or removed.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Block gated paths without human approval
+        env: { LABELS: "${{ join(github.event.pull_request.labels.*.name, ',') }}" }
+        run: |
+          changed=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          gated=$(echo "$changed" | grep -E '^(db/migrations/|packages/rbac/|services/payments/|services/accounts/|infra/|\.github/)' || true)
+          if [ -n "$gated" ] && ! echo "$LABELS" | grep -q 'human-approved'; then
+            echo "Gated paths changed without the human-approved label:"; echo "$gated"; exit 1
+          fi
