@@ -4,8 +4,9 @@
   "packageManager": "pnpm@9.12.0",
   "engines": { "node": ">=20" },
   "scripts": {
+    "bootstrap": "pnpm install --frozen-lockfile && pnpm --filter \"./packages/*\" build && pnpm -r lint && pnpm test",
     "build": "pnpm -r build",
-    "test": "pnpm -r test",
+    "test": "pnpm -r test && vitest run --config vitest.bootstrap.config.mjs",
     "lint": "pnpm -r lint",
     "format": "prettier --write ."
   },
