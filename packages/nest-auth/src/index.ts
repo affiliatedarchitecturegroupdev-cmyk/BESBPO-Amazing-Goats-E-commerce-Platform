@@ -12,10 +12,14 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Permission, Role, canAny } from '@ag/rbac';
-import { Observable, tap } from 'rxjs';
+import { Observable, concatMap } from 'rxjs';
 import { JwtClaims, JwtVerifyOptions, verifyJwt } from './jwt';
+import { auditRecordFromRequest, isMutating } from './audit-domain';
+import { AUDIT_STORE, AuditStore, InMemoryAuditStore } from './audit-store';
 
 export * from './jwt';
+export * from './audit-domain';
+export * from './audit-store';
 
 export const PERMS_KEY = 'permissions';
 export const RequirePermissions = (...p: Permission[]) => SetMetadata(PERMS_KEY, p);
@@ -150,16 +154,28 @@ export class PermissionsGuard implements CanActivate {
   }
 }
 
-/** Writes an audit record for every mutating request. TODO(T-006): persist to audit.audit_log. */
+/**
+ * Writes an audit record for every mutating request. Records are written
+ * after the handler succeeds, and the store is append-only, so history is
+ * never rewritten. Persisting to `audit.audit_log` swaps the store, not the
+ * interceptor. Provide an `AUDIT_STORE` to share a log across services.
+ */
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
+  constructor(
+    @Optional() @Inject(AUDIT_STORE) private readonly store: AuditStore = new InMemoryAuditStore(),
+    @Optional() @Inject(AUTH_OPTIONS) private readonly options: AuthOptions = {},
+  ) {}
+
   intercept(ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
     const req = ctx.switchToHttp().getRequest();
-    const started = Date.now();
-    return next.handle().pipe(tap(() => {
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-        console.log(JSON.stringify({ audit: true, method: req.method, path: req.url, user: userFromRequest(req)?.id, ms: Date.now() - started }));
-      }
-    }));
+    if (!isMutating(req?.method)) return next.handle();
+    const actor = userFromRequest(req, this.options);
+    return next.handle().pipe(
+      concatMap(async (value) => {
+        await this.store.append(auditRecordFromRequest(req, actor, new Date()));
+        return value;
+      }),
+    );
   }
 }

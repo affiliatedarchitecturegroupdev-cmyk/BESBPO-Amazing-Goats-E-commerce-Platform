@@ -10,9 +10,9 @@ files: ["packages/nest-auth/**", "services/identity/**"]
 Persist audit log.
 
 ## Acceptance
-- [ ] Every mutating request writes an audit row
-- [ ] Audit rows cannot be updated
-- [ ] Tests added and passing
+- [x] Every mutating request writes an audit row
+- [x] Audit rows cannot be updated
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.
