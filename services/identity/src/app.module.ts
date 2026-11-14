@@ -10,6 +10,9 @@ import { AccessModule } from './access/access.module';
 @Module({
   imports: [UsersModule, RolesModule, AuditModule, AccessModule],
   controllers: [HealthController],
-  providers: [{ provide: APP_GUARD, useClass: PermissionsGuard }, { provide: APP_INTERCEPTOR, useClass: AuditInterceptor }],
+  providers: [
+    { provide: APP_GUARD, useClass: PermissionsGuard },
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
+  ],
 })
 export class AppModule {}
