@@ -41,3 +41,13 @@ erDiagram
   CAMPAIGNS ||--o{ CREATIVES : shows
   ORGS ||--o{ PURCHASE_ORDERS : supplies
 ```
+
+## Row-level security
+
+The gateway sets `app.staff`, `app.org_id` and `app.user_id` per request after RBAC. Policies in `0010_row_level_security.sql` and `0011_rls_personal_data.sql` scope each row to its owner; with none of the settings present the default is deny.
+
+- A superuser or table owner bypasses RLS entirely, so the application connects as a `NOSUPERUSER NOBYPASSRLS` role. See `db/README.md`.
+- A policy with only `USING` also governs `INSERT` and `UPDATE`.
+- Child tables inherit the parent's visibility by testing the parent row (which is itself subject to RLS), so a line is visible exactly when its order or invoice is.
+
+`db/tests/rls.sql` is the source of truth and runs in the CI `db` job. It covers orders, invoices and campaigns (the acceptance criteria) plus the tables added in 0011: order lines and events, reservations, subscriptions, quotes, reviews, trade accounts, credit applications, documents, bureau reports, credit limits, credit events, sureties, invoice lines, allocations, collection actions, disputes, advertisers, wallet ledger, creatives, partner documents and slots, purchase order lines, payouts, payment intents, payments, refunds, stops, deliveries and proof of delivery.
