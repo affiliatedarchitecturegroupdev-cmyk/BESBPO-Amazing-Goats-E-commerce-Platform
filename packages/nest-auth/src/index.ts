@@ -7,6 +7,8 @@ import {
   UnauthorizedException,
   NestInterceptor,
   CallHandler,
+  Inject,
+  Optional,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Permission, Role, canAny } from '@ag/rbac';
@@ -17,6 +19,9 @@ export * from './jwt';
 
 export const PERMS_KEY = 'permissions';
 export const RequirePermissions = (...p: Permission[]) => SetMetadata(PERMS_KEY, p);
+
+/** Injection token for the guard's auth options, so services can configure it. */
+export const AUTH_OPTIONS = 'AG_AUTH_OPTIONS';
 
 export interface AuthUser {
   id: string;
@@ -65,8 +70,14 @@ export function userFromClaims(claims: JwtClaims): AuthUser {
   };
 }
 
-export function isDevShimAllowed(opts: AuthOptions): boolean {
-  return opts.allowDevHeaders === true && process.env.NODE_ENV !== 'production';
+/**
+ * Whether the development header shim may authenticate a request. It is
+ * opt-in (`allowDevHeaders` or `AG_ALLOW_DEV_HEADERS=true`) and always off in
+ * production, so it can never authenticate a real request there.
+ */
+export function isDevShimAllowed(opts: AuthOptions, env: NodeJS.ProcessEnv = process.env): boolean {
+  const optedIn = opts.allowDevHeaders === true || env.AG_ALLOW_DEV_HEADERS === 'true';
+  return optedIn && env.NODE_ENV !== 'production';
 }
 
 export function readJwtOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): JwtAuthOptions {
@@ -75,6 +86,18 @@ export function readJwtOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): Jwt
     publicKey: env.JWT_PUBLIC_KEY,
     issuer: env.JWT_ISSUER,
     audience: env.JWT_AUDIENCE,
+  };
+}
+
+/**
+ * Guard options built from the environment. The dev header shim is opt-in via
+ * `AG_ALLOW_DEV_HEADERS=true`, and `isDevShimAllowed` still forces it off in
+ * production. Provide it under `AUTH_OPTIONS` to configure the guard.
+ */
+export function authOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): AuthOptions {
+  return {
+    ...readJwtOptionsFromEnv(env),
+    allowDevHeaders: env.AG_ALLOW_DEV_HEADERS === 'true',
   };
 }
 
@@ -111,7 +134,7 @@ export function userFromRequest(req: any, opts: AuthOptions = {}): AuthUser | un
 export class PermissionsGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly options: AuthOptions = {},
+    @Optional() @Inject(AUTH_OPTIONS) private readonly options: AuthOptions = {},
   ) {}
 
   canActivate(ctx: ExecutionContext): boolean {

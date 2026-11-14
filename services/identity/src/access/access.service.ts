@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Role } from '@ag/rbac';
 import {
   applyRoleChange,
@@ -9,6 +9,9 @@ import {
   ElevationRequest,
 } from './access-domain';
 import { ACCESS_STORE, AccessStore } from './access.store';
+
+/** Injection token for the clock, so tests can freeze time. */
+export const ACCESS_CLOCK = 'AG_ACCESS_CLOCK';
 
 export interface RequestRoleChangeInput {
   subjectId: string;
@@ -27,7 +30,7 @@ export interface RequestElevationInput {
 export class AccessService {
   constructor(
     @Inject(ACCESS_STORE) private readonly store: AccessStore,
-    private readonly now: () => Date = () => new Date(),
+    @Optional() @Inject(ACCESS_CLOCK) private readonly now: () => Date = () => new Date(),
   ) {}
 
   /** Record a role change request. It waits for a second approver. */
