@@ -2,13 +2,20 @@
   "name": "amazing-goats-platform",
   "private": true,
   "packageManager": "pnpm@9.12.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "bootstrap": "pnpm install --frozen-lockfile && pnpm --filter \"./packages/*\" build && pnpm -r lint && pnpm test",
     "build": "pnpm -r build",
-    "test": "pnpm -r test && vitest run --config vitest.bootstrap.config.mjs",
+    "test": "pnpm -r test && vitest run --config vitest.bootstrap.config.mjs && vitest run --config vitest.deploy.config.mjs",
     "lint": "pnpm -r lint",
     "format": "prettier --write ."
   },
-  "devDependencies": { "prettier": "^3.3.3", "typescript": "^5.6.3", "vitest": "^2.1.4" }
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4",
+    "yaml": "^2.9.1"
+  }
 }

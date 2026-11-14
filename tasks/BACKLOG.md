@@ -38,3 +38,4 @@ Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 
 | T-033 | Dairy and fresh produce onboarding | 3 | backend | none |
 | T-034 | Observability, logging and alerts | 1 | devops | gate:infra |
 | T-035 | End-to-end tests for core journeys | 1 | qa | none |
+| T-036 | Deployment on Northflank and Koyeb | 0 | devops | gate:infra |

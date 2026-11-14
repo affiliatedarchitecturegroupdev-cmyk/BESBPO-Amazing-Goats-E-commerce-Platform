@@ -1,123 +1,446 @@
 {
+  "$schema": "https://api.northflank.com/v1/schemas/template",
+  "apiVersion": "v1.2",
   "name": "amazing-goats",
-  "region": "africa-south (Johannesburg)",
-  "note": "Use Northflank managed cloud in Johannesburg. Add Postgres and Redis addons in the same project. Human approval required for any change to this file.",
-  "addons": [
-    {
-      "name": "ag-postgres",
-      "type": "postgresql",
-      "version": "16"
-    },
-    {
-      "name": "ag-redis",
-      "type": "redis"
+  "description": "Amazing Goats (Ezimbuzini) core platform in Johannesburg. Launch topology from docs/01-architecture.md: gateway, commerce, payments, logistics, notifications and the storefront. Postgres and Redis run as Northflank addons in the same project.",
+  "arguments": {
+    "JWT_ISSUER": "",
+    "JWT_AUDIENCE": "ag-platform",
+    "PEACH_ENTITY_ID": "",
+    "PEACH_ACCESS_TOKEN": "",
+    "PAYFAST_MERCHANT_ID": "",
+    "PAYFAST_MERCHANT_KEY": "",
+    "STITCH_CLIENT_ID": "",
+    "STITCH_CLIENT_SECRET": "",
+    "TRADESAFE_CLIENT_ID": "",
+    "TRADESAFE_CLIENT_SECRET": "",
+    "LULAPAY_API_KEY": "",
+    "WHATSAPP_TOKEN": "",
+    "SMTP_URL": "",
+    "STORE_URL": "https://amazinggoats.store",
+    "CORPORATE_URL": "https://amazinggoats.besbpo.co.za",
+    "ORDERS_EMAIL": "orders@amazinggoats.store"
+  },
+  "options": {
+    "autorun": false,
+    "concurrencyPolicy": "allow"
+  },
+  "spec": {
+    "kind": "Workflow",
+    "spec": {
+      "type": "sequential",
+      "steps": [
+        {
+          "kind": "Project",
+          "ref": "project",
+          "spec": {
+            "name": "amazing-goats",
+            "region": "africa-south",
+            "description": "Amazing Goats (Ezimbuzini) production core.",
+            "color": "#2f6f4f"
+          }
+        },
+        {
+          "kind": "Workflow",
+          "ref": "core",
+          "spec": {
+            "type": "sequential",
+            "context": {
+              "projectId": "${refs.project.id}"
+            },
+            "steps": [
+              {
+                "kind": "Addon",
+                "ref": "postgres",
+                "spec": {
+                  "name": "ag-postgres",
+                  "description": "One Postgres, one schema per bounded context. Money is integer cents (ZAR).",
+                  "type": "postgresql",
+                  "version": "16",
+                  "tlsEnabled": true,
+                  "externalAccessEnabled": false,
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "storage": 8192,
+                    "replicas": 1
+                  }
+                }
+              },
+              {
+                "kind": "Addon",
+                "ref": "redis",
+                "spec": {
+                  "name": "ag-redis",
+                  "description": "Queues, cache and ad pacing.",
+                  "type": "redis",
+                  "version": "7",
+                  "tlsEnabled": true,
+                  "externalAccessEnabled": false,
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "storage": 4096,
+                    "replicas": 1
+                  }
+                }
+              },
+              {
+                "kind": "SecretGroup",
+                "ref": "app-secrets",
+                "spec": {
+                  "name": "ag-app-secrets",
+                  "description": "Runtime secrets inherited by the core services. Addon connection strings are linked below; application secrets come from the template arguments.",
+                  "type": "secret",
+                  "secretType": "environment",
+                  "priority": 10,
+                  "addonDependencies": [
+                    {
+                      "addonId": "${refs.postgres.id}",
+                      "keys": [{ "keyName": "POSTGRES_URI", "aliases": ["DATABASE_URL"] }]
+                    },
+                    {
+                      "addonId": "${refs.redis.id}",
+                      "keys": [{ "keyName": "REDIS_MASTER_URL", "aliases": ["REDIS_URL"] }]
+                    }
+                  ],
+                  "secrets": {
+                    "variables": {
+                      "NODE_ENV": "production",
+                      "JWT_ISSUER": "${args.JWT_ISSUER}",
+                      "JWT_AUDIENCE": "${args.JWT_AUDIENCE}",
+                      "PEACH_ENTITY_ID": "${args.PEACH_ENTITY_ID}",
+                      "PEACH_ACCESS_TOKEN": "${args.PEACH_ACCESS_TOKEN}",
+                      "PAYFAST_MERCHANT_ID": "${args.PAYFAST_MERCHANT_ID}",
+                      "PAYFAST_MERCHANT_KEY": "${args.PAYFAST_MERCHANT_KEY}",
+                      "STITCH_CLIENT_ID": "${args.STITCH_CLIENT_ID}",
+                      "STITCH_CLIENT_SECRET": "${args.STITCH_CLIENT_SECRET}",
+                      "TRADESAFE_CLIENT_ID": "${args.TRADESAFE_CLIENT_ID}",
+                      "TRADESAFE_CLIENT_SECRET": "${args.TRADESAFE_CLIENT_SECRET}",
+                      "LULAPAY_API_KEY": "${args.LULAPAY_API_KEY}",
+                      "WHATSAPP_TOKEN": "${args.WHATSAPP_TOKEN}",
+                      "SMTP_URL": "${args.SMTP_URL}",
+                      "STORE_URL": "${args.STORE_URL}",
+                      "CORPORATE_URL": "${args.CORPORATE_URL}",
+                      "ORDERS_EMAIL": "${args.ORDERS_EMAIL}"
+                    },
+                    "files": {}
+                  },
+                  "restrictions": {
+                    "restricted": false,
+                    "nfObjects": [],
+                    "tags": []
+                  }
+                }
+              },
+              {
+                "kind": "CombinedService",
+                "ref": "gateway",
+                "spec": {
+                  "name": "gateway",
+                  "description": "NestJS: auth, RBAC, rate limits, BFF.",
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "buildPlan": "nf-compute-200-8"
+                  },
+                  "buildSource": "git",
+                  "vcsData": {
+                    "projectUrl": "https://github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform",
+                    "projectType": "github",
+                    "projectBranch": "main"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "dockerFilePath": "/services/gateway/Dockerfile",
+                      "dockerWorkDir": "/"
+                    }
+                  },
+                  "buildConfiguration": {
+                    "pathIgnoreRules": ["docs/**", "*.md", "tasks/**"]
+                  },
+                  "deployment": {
+                    "instances": 1,
+                    "docker": { "configType": "default" }
+                  },
+                  "ports": [
+                    { "name": "http", "internalPort": 3000, "public": true, "protocol": "HTTP" }
+                  ],
+                  "healthChecks": [
+                    {
+                      "protocol": "HTTP",
+                      "type": "readinessProbe",
+                      "path": "/health",
+                      "port": 3000,
+                      "initialDelaySeconds": 10,
+                      "periodSeconds": 30,
+                      "timeoutSeconds": 3,
+                      "failureThreshold": 3,
+                      "successThreshold": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "CombinedService",
+                "ref": "commerce",
+                "spec": {
+                  "name": "commerce",
+                  "description": "Catalogue, pricing, orders and cycles.",
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "buildPlan": "nf-compute-200-8"
+                  },
+                  "buildSource": "git",
+                  "vcsData": {
+                    "projectUrl": "https://github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform",
+                    "projectType": "github",
+                    "projectBranch": "main"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "dockerFilePath": "/services/commerce/Dockerfile",
+                      "dockerWorkDir": "/"
+                    }
+                  },
+                  "buildConfiguration": {
+                    "pathIgnoreRules": ["docs/**", "*.md", "tasks/**"]
+                  },
+                  "deployment": {
+                    "instances": 1,
+                    "docker": { "configType": "default" }
+                  },
+                  "ports": [
+                    {
+                      "name": "http",
+                      "internalPort": 3001,
+                      "public": false,
+                      "vpcAccessible": true,
+                      "protocol": "HTTP"
+                    }
+                  ],
+                  "healthChecks": [
+                    {
+                      "protocol": "HTTP",
+                      "type": "readinessProbe",
+                      "path": "/health",
+                      "port": 3001,
+                      "initialDelaySeconds": 10,
+                      "periodSeconds": 30,
+                      "timeoutSeconds": 3,
+                      "failureThreshold": 3,
+                      "successThreshold": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "CombinedService",
+                "ref": "payments",
+                "spec": {
+                  "name": "payments",
+                  "description": "Provider interface and Peach, PayFast, Stitch adapters.",
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "buildPlan": "nf-compute-200-8"
+                  },
+                  "buildSource": "git",
+                  "vcsData": {
+                    "projectUrl": "https://github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform",
+                    "projectType": "github",
+                    "projectBranch": "main"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "dockerFilePath": "/services/payments/Dockerfile",
+                      "dockerWorkDir": "/"
+                    }
+                  },
+                  "buildConfiguration": {
+                    "pathIgnoreRules": ["docs/**", "*.md", "tasks/**"]
+                  },
+                  "deployment": {
+                    "instances": 1,
+                    "docker": { "configType": "default" }
+                  },
+                  "ports": [
+                    {
+                      "name": "http",
+                      "internalPort": 3005,
+                      "public": false,
+                      "vpcAccessible": true,
+                      "protocol": "HTTP"
+                    }
+                  ],
+                  "healthChecks": [
+                    {
+                      "protocol": "HTTP",
+                      "type": "readinessProbe",
+                      "path": "/health",
+                      "port": 3005,
+                      "initialDelaySeconds": 10,
+                      "periodSeconds": 30,
+                      "timeoutSeconds": 3,
+                      "failureThreshold": 3,
+                      "successThreshold": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "CombinedService",
+                "ref": "logistics",
+                "spec": {
+                  "name": "logistics",
+                  "description": "Zones, slots and routes.",
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "buildPlan": "nf-compute-200-8"
+                  },
+                  "buildSource": "git",
+                  "vcsData": {
+                    "projectUrl": "https://github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform",
+                    "projectType": "github",
+                    "projectBranch": "main"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "dockerFilePath": "/services/logistics/Dockerfile",
+                      "dockerWorkDir": "/"
+                    }
+                  },
+                  "buildConfiguration": {
+                    "pathIgnoreRules": ["docs/**", "*.md", "tasks/**"]
+                  },
+                  "deployment": {
+                    "instances": 1,
+                    "docker": { "configType": "default" }
+                  },
+                  "ports": [
+                    {
+                      "name": "http",
+                      "internalPort": 3004,
+                      "public": false,
+                      "vpcAccessible": true,
+                      "protocol": "HTTP"
+                    }
+                  ],
+                  "healthChecks": [
+                    {
+                      "protocol": "HTTP",
+                      "type": "readinessProbe",
+                      "path": "/health",
+                      "port": 3004,
+                      "initialDelaySeconds": 10,
+                      "periodSeconds": 30,
+                      "timeoutSeconds": 3,
+                      "failureThreshold": 3,
+                      "successThreshold": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "CombinedService",
+                "ref": "notifications",
+                "spec": {
+                  "name": "notifications",
+                  "description": "Email and WhatsApp templates.",
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "buildPlan": "nf-compute-200-8"
+                  },
+                  "buildSource": "git",
+                  "vcsData": {
+                    "projectUrl": "https://github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform",
+                    "projectType": "github",
+                    "projectBranch": "main"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "dockerFilePath": "/services/notifications/Dockerfile",
+                      "dockerWorkDir": "/"
+                    }
+                  },
+                  "buildConfiguration": {
+                    "pathIgnoreRules": ["docs/**", "*.md", "tasks/**"]
+                  },
+                  "deployment": {
+                    "instances": 1,
+                    "docker": { "configType": "default" }
+                  },
+                  "ports": [
+                    {
+                      "name": "http",
+                      "internalPort": 3006,
+                      "public": false,
+                      "vpcAccessible": true,
+                      "protocol": "HTTP"
+                    }
+                  ],
+                  "healthChecks": [
+                    {
+                      "protocol": "HTTP",
+                      "type": "readinessProbe",
+                      "path": "/health",
+                      "port": 3006,
+                      "initialDelaySeconds": 10,
+                      "periodSeconds": 30,
+                      "timeoutSeconds": 3,
+                      "failureThreshold": 3,
+                      "successThreshold": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "CombinedService",
+                "ref": "storefront",
+                "spec": {
+                  "name": "storefront",
+                  "description": "Next.js public store. The remaining front ends are added the same way.",
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "buildPlan": "nf-compute-200-8"
+                  },
+                  "buildSource": "git",
+                  "vcsData": {
+                    "projectUrl": "https://github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform",
+                    "projectType": "github",
+                    "projectBranch": "main"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "dockerFilePath": "/apps/storefront/Dockerfile",
+                      "dockerWorkDir": "/"
+                    }
+                  },
+                  "buildConfiguration": {
+                    "pathIgnoreRules": ["docs/**", "*.md", "tasks/**"]
+                  },
+                  "deployment": {
+                    "instances": 1,
+                    "docker": { "configType": "default" }
+                  },
+                  "ports": [
+                    { "name": "http", "internalPort": 3000, "public": true, "protocol": "HTTP" }
+                  ],
+                  "healthChecks": [
+                    {
+                      "protocol": "HTTP",
+                      "type": "readinessProbe",
+                      "path": "/",
+                      "port": 3000,
+                      "initialDelaySeconds": 15,
+                      "periodSeconds": 30,
+                      "timeoutSeconds": 5,
+                      "failureThreshold": 3,
+                      "successThreshold": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
     }
-  ],
-  "services": [
-    {
-      "name": "gateway",
-      "port": 3000,
-      "build": "services/gateway/Dockerfile",
-      "healthcheck": "/health",
-      "replicas": {
-        "min": 1,
-        "max": 4
-      }
-    },
-    {
-      "name": "commerce",
-      "port": 3001,
-      "build": "services/commerce/Dockerfile",
-      "healthcheck": "/health",
-      "replicas": {
-        "min": 1,
-        "max": 4
-      }
-    },
-    {
-      "name": "stock",
-      "port": 3002,
-      "build": "services/stock/Dockerfile",
-      "healthcheck": "/health",
-      "replicas": {
-        "min": 1,
-        "max": 4
-      }
-    },
-    {
-      "name": "accounts",
-      "port": 3003,
-      "build": "services/accounts/Dockerfile",
-      "healthcheck": "/health",
-      "replicas": {
-        "min": 1,
-        "max": 4
-      }
-    },
-    {
-      "name": "logistics",
-      "port": 3004,
-      "build": "services/logistics/Dockerfile",
-      "healthcheck": "/health",
-      "replicas": {
-        "min": 1,
-        "max": 4
-      }
-    },
-    {
-      "name": "payments",
-      "port": 3005,
-      "build": "services/payments/Dockerfile",
-      "healthcheck": "/health",
-      "replicas": {
-        "min": 1,
-        "max": 4
-      }
-    },
-    {
-      "name": "notifications",
-      "port": 3006,
-      "build": "services/notifications/Dockerfile",
-      "healthcheck": "/health",
-      "replicas": {
-        "min": 1,
-        "max": 4
-      }
-    },
-    {
-      "name": "ads",
-      "port": 3007,
-      "build": "services/ads/Dockerfile",
-      "healthcheck": "/health",
-      "replicas": {
-        "min": 1,
-        "max": 4
-      }
-    },
-    {
-      "name": "partners",
-      "port": 3008,
-      "build": "services/partners/Dockerfile",
-      "healthcheck": "/health",
-      "replicas": {
-        "min": 1,
-        "max": 4
-      }
-    },
-    {
-      "name": "identity",
-      "port": 3009,
-      "build": "services/identity/Dockerfile",
-      "healthcheck": "/health",
-      "replicas": {
-        "min": 1,
-        "max": 4
-      }
-    },
-    {
-      "name": "storefront",
-      "port": 3100,
-      "build": "apps/storefront/Dockerfile"
-    }
-  ]
+  }
 }

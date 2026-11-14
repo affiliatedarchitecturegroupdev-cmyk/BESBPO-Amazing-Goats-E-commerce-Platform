@@ -1,0 +1,166 @@
+// Deployment contract (T-036).
+//
+// The infra manifests are the only description of what runs in production, and
+// nothing else in the repo fails when they drift from the code. This test keeps
+// them honest: the Northflank template and the Koyeb compose file both parse,
+// every service node names a Dockerfile that exists, each declared port matches
+// the `PORT` default the service binds (or the Dockerfile `EXPOSE`), each HTTP
+// health path is one the app actually serves, and no secret is checked in.
+//
+// It reads files only. It does not contact Northflank or Koyeb.
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { parse as parseYaml } from 'yaml';
+import { describe, it, expect } from 'vitest';
+
+const root = process.cwd();
+const readJson = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
+const readYaml = (p) => parseYaml(readFileSync(join(root, p), 'utf8'));
+const exists = (p) => existsSync(join(root, p));
+
+// Collect every node in a Northflank template, at any depth. A node is any
+// object with a `kind`; steps nest under `spec.spec.steps`, so walk every value.
+function nodesOf(template) {
+  const found = [];
+  const walk = (value) => {
+    if (!value || typeof value !== 'object') return;
+    if (Array.isArray(value)) return value.forEach(walk);
+    if (typeof value.kind === 'string') found.push(value);
+    for (const child of Object.values(value)) walk(child);
+  };
+  walk(template);
+  return found;
+}
+
+// The port each service binds. Nest services default `process.env.PORT ?? N`.
+const NEST_PORT = (dir) => {
+  const main = readFileSync(join(root, dir, 'src', 'main.ts'), 'utf8');
+  const m = main.match(/process\.env\.PORT\s*\?\?\s*(\d+)/);
+  expect(m, `${dir}/src/main.ts has no PORT default`).not.toBeNull();
+  return Number(m[1]);
+};
+
+const northflank = readJson('infra/northflank/project.json');
+const koyeb = readYaml('infra/koyeb/koyeb-compose.yaml');
+
+describe('Northflank template (infra/northflank/project.json)', () => {
+  it('is a v1.2 template with a workflow root', () => {
+    expect(northflank.apiVersion).toBe('v1.2');
+    expect(northflank.spec?.kind).toBe('Workflow');
+    expect(Array.isArray(northflank.spec?.spec?.steps)).toBe(true);
+  });
+
+  it('targets the Johannesburg region', () => {
+    const project = nodesOf(northflank).find((n) => n.kind === 'Project');
+    expect(project, 'no Project node').toBeTruthy();
+    expect(project.spec.region).toBe('africa-south');
+  });
+
+  it('provisions Postgres and Redis addons', () => {
+    const types = nodesOf(northflank)
+      .filter((n) => n.kind === 'Addon')
+      .map((n) => n.spec.type);
+    expect(types).toContain('postgresql');
+    expect(types).toContain('redis');
+  });
+
+  it('links addon connection strings to DATABASE_URL and REDIS_URL', () => {
+    const group = nodesOf(northflank).find((n) => n.kind === 'SecretGroup');
+    expect(group, 'no SecretGroup node').toBeTruthy();
+    const aliases = group.spec.addonDependencies.flatMap((d) => d.keys.flatMap((k) => k.aliases));
+    expect(aliases).toContain('DATABASE_URL');
+    expect(aliases).toContain('REDIS_URL');
+  });
+
+  it('every service builds a Dockerfile that exists, on the right port and path', () => {
+    const services = nodesOf(northflank).filter((n) => n.kind === 'CombinedService');
+    expect(services.length).toBeGreaterThan(0);
+
+    for (const node of services) {
+      const name = node.spec.name;
+      const dockerfile = node.spec.buildSettings?.dockerfile?.dockerFilePath;
+      expect(dockerfile, `${name} has no dockerfile`).toBeTruthy();
+
+      // dockerFilePath is absolute inside the repo, e.g. /services/gateway/Dockerfile.
+      const rel = dockerfile.replace(/^\//, '');
+      expect(exists(rel), `${name}: ${rel} does not exist`).toBe(true);
+
+      const declared = node.spec.ports?.[0]?.internalPort;
+      const dir = rel.replace(/\/Dockerfile$/, '');
+      const expected = dir.startsWith('services/') ? NEST_PORT(dir) : 3000; // apps run Next.js on 3000
+      expect(declared, `${name} port`).toBe(expected);
+
+      const check = node.spec.healthChecks?.[0];
+      expect(check.protocol, `${name} health protocol`).toBe('HTTP');
+      expect(check.port, `${name} health port`).toBe(expected);
+
+      // Nest services serve GET /health; the storefront serves its home page at /.
+      if (dir.startsWith('services/')) {
+        expect(check.path, `${name} health path`).toBe('/health');
+        expect(
+          exists(join(dir, 'src', 'health', 'health.controller.ts')),
+          `${name} has no health controller`,
+        ).toBe(true);
+      } else {
+        expect(check.path).toBe('/');
+        expect(exists(join(dir, 'app', 'page.tsx')), `${name} has no home page`).toBe(true);
+      }
+    }
+  });
+
+  it('checks in no plaintext secrets', () => {
+    const group = nodesOf(northflank).find((n) => n.kind === 'SecretGroup');
+    for (const [key, value] of Object.entries(group.spec.secrets.variables)) {
+      // Anything that looks like a credential must come from a template argument.
+      if (/(TOKEN|SECRET|KEY|PASSWORD|API|CREDENTIAL)/i.test(key)) {
+        expect(String(value), `${key} is not a template argument`).toMatch(
+          /^\$\{args\.[A-Z0-9_]+\}$/,
+        );
+      }
+    }
+  });
+});
+
+describe('Koyeb compose (infra/koyeb/koyeb-compose.yaml)', () => {
+  it('names an app and at least one service', () => {
+    expect(koyeb.app?.name).toBeTruthy();
+    expect(Array.isArray(koyeb.services)).toBe(true);
+    expect(koyeb.services.length).toBeGreaterThan(0);
+  });
+
+  it('every service builds an existing Dockerfile in a real region', () => {
+    const regions = ['fra', 'was', 'sin', 'tyo', 'par', 'sfo', 'aws-us-east-1'];
+    for (const entry of koyeb.services) {
+      const def = entry.definition;
+      const name = def.name;
+      expect(def.regions?.length, `${name} has no region`).toBeGreaterThan(0);
+      for (const region of def.regions) expect(regions).toContain(region);
+
+      const workdir = def.git?.workdir;
+      const dockerfile = def.git?.docker?.dockerfile;
+      expect(workdir, `${name} has no workdir`).toBeTruthy();
+      expect(dockerfile, `${name} has no dockerfile`).toBeTruthy();
+      expect(
+        exists(join(workdir, dockerfile)),
+        `${name}: ${workdir}/${dockerfile} does not exist`,
+      ).toBe(true);
+
+      // Python services expose /health on 8000.
+      const check = def.health_checks?.[0]?.http;
+      expect(check?.path, `${name} health path`).toBe('/health');
+      expect(check?.port, `${name} health port`).toBe(8000);
+    }
+  });
+
+  it('references secrets by name, never by value', () => {
+    for (const entry of koyeb.services) {
+      for (const env of entry.definition.env ?? []) {
+        expect(
+          env.value,
+          `${entry.definition.name}: ${env.key} has a plaintext value`,
+        ).toBeUndefined();
+        expect(env.secret, `${entry.definition.name}: ${env.key} has no secret`).toBeTruthy();
+      }
+    }
+  });
+});
