@@ -1,4 +1,5 @@
-import type { Permission } from '@ag/rbac';
+import type { Permission, Role } from '@ag/rbac';
+import { canAny } from '@ag/rbac';
 // The admin menu is generated from permissions, so people only see what they may use.
 export const NAV: { href: string; label: string; needs: Permission }[] = [
   { href: '/orders', label: 'Orders', needs: 'orders:read' },
@@ -17,3 +18,8 @@ export const NAV: { href: string; label: string; needs: Permission }[] = [
   { href: '/partners', label: 'Partners', needs: 'procurement:manage' },
   { href: '/reports', label: 'Reports', needs: 'reports:read' },
 ];
+
+/** The menu entries a role may see, in the same order. */
+export function navFor(roles: Role[]): { href: string; label: string; needs: Permission }[] {
+  return NAV.filter((item) => canAny(roles, item.needs));
+}
