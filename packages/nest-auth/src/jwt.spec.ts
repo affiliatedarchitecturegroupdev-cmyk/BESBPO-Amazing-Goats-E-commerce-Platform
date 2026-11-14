@@ -1,7 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { createHmac, generateKeyPairSync, sign as signRsa } from 'node:crypto';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { verifyJwt, JwtError } from './jwt';
-import { rolesFromClaims, userFromClaims, userFromRequest, isDevShimAllowed } from './index';
+import {
+  rolesFromClaims,
+  userFromClaims,
+  userFromRequest,
+  isDevShimAllowed,
+  authOptionsFromEnv,
+  PermissionsGuard,
+  PERMS_KEY,
+} from './index';
 
 const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
 const now = () => 1_700_000_000_000; // fixed clock (seconds: 1_700_000_000)
@@ -104,5 +114,86 @@ describe('claim and request mapping', () => {
     expect(userFromRequest(req, { allowDevHeaders: true })).toBeUndefined(); // never in production
 
     process.env.NODE_ENV = prev;
+  });
+
+  it('honours the AG_ALLOW_DEV_HEADERS opt-in outside production only', () => {
+    const req = { headers: { 'x-dev-user': 'dev-1', 'x-dev-roles': 'sales' } };
+    const prev = process.env.NODE_ENV;
+    const prevFlag = process.env.AG_ALLOW_DEV_HEADERS;
+
+    process.env.NODE_ENV = 'development';
+    process.env.AG_ALLOW_DEV_HEADERS = 'true';
+    expect(isDevShimAllowed({})).toBe(true);
+    expect(userFromRequest(req, {})?.roles).toEqual(['sales']);
+
+    process.env.NODE_ENV = 'production';
+    expect(isDevShimAllowed({})).toBe(false);
+    expect(userFromRequest(req, {})).toBeUndefined(); // never in production
+
+    process.env.NODE_ENV = prev;
+    if (prevFlag === undefined) delete process.env.AG_ALLOW_DEV_HEADERS;
+    else process.env.AG_ALLOW_DEV_HEADERS = prevFlag;
+  });
+});
+
+describe('authOptionsFromEnv', () => {
+  it('reads the JWT settings and the dev-shim flag from the environment', () => {
+    const opts = authOptionsFromEnv({
+      JWT_SECRET: 's', JWT_PUBLIC_KEY: 'p', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a', AG_ALLOW_DEV_HEADERS: 'true',
+    } as NodeJS.ProcessEnv);
+    expect(opts).toMatchObject({ secret: 's', publicKey: 'p', issuer: 'i', audience: 'a', allowDevHeaders: true });
+  });
+
+  it('defaults the dev-shim flag to off', () => {
+    expect(authOptionsFromEnv({} as NodeJS.ProcessEnv).allowDevHeaders).toBe(false);
+  });
+});
+
+describe('PermissionsGuard', () => {
+  const reflector = new Reflector();
+  const ctxFor = (_required: string[] | undefined, req: any): any => ({
+    getHandler: () => 'handler',
+    getClass: () => 'class',
+    switchToHttp: () => ({ getRequest: () => req }),
+  });
+  // The guard reads metadata via the reflector, so stub it per test.
+  const guardFor = (required: string[] | undefined, opts = {}) => {
+    const g = new PermissionsGuard(reflector, opts as any);
+    (reflector as any).getAllAndOverride = () => required;
+    return g;
+  };
+
+  it('allows a route with no declared permissions', () => {
+    expect(guardFor(undefined, {}).canActivate(ctxFor(undefined, { headers: {} }))).toBe(true);
+    expect(guardFor([], {}).canActivate(ctxFor([], { headers: {} }))).toBe(true);
+  });
+
+  it('throws 401 when a protected route is called without a token', () => {
+    const guard = guardFor(['roles:manage'], { secret: 'test-secret', now });
+    expect(() => guard.canActivate(ctxFor(['roles:manage'], { headers: {} }))).toThrow(UnauthorizedException);
+  });
+
+  it('throws 401 for an invalid token', () => {
+    const guard = guardFor(['roles:manage'], { secret: 'test-secret', now });
+    const req = { headers: { authorization: 'Bearer nonsense' } };
+    expect(() => guard.canActivate(ctxFor(['roles:manage'], req))).toThrow(UnauthorizedException);
+  });
+
+  it('throws 403 when the caller lacks the permission', () => {
+    const guard = guardFor(['roles:manage'], { secret: 'test-secret', now });
+    const token = signHs256({ ...baseClaims, roles: ['driver'] });
+    const req = { headers: { authorization: `Bearer ${token}` } };
+    expect(() => guard.canActivate(ctxFor(['roles:manage'], req))).toThrow(ForbiddenException);
+  });
+
+  it('allows a caller holding the permission', () => {
+    const guard = guardFor(['roles:manage'], { secret: 'test-secret', now });
+    const token = signHs256({ ...baseClaims, roles: ['chief_admin'] });
+    const req = { headers: { authorization: `Bearer ${token}` } };
+    expect(guard.canActivate(ctxFor(['roles:manage'], req))).toBe(true);
+  });
+
+  it('constructs without any injected options (the app-module wiring case)', () => {
+    expect(() => new PermissionsGuard(reflector)).not.toThrow();
   });
 });
