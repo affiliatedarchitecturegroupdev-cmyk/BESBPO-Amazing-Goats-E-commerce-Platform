@@ -1,0 +1,50 @@
+{
+  "$comment": "Observability wiring for task T-034. The core runs on Northflank in Johannesburg; the non-core services run on Koyeb. This file is a manifest, not an API call: it records what the operator creates in each console. Credentials are template arguments, never literals. infra/deploy.spec.mjs keeps it honest.",
+  "northflank": {
+    "project": "amazing-goats",
+    "notificationIntegrations": [
+      {
+        "name": "amazing-goats-platform-alerts",
+        "type": "RAW_WEBHOOK",
+        "webhook": "${args.ALERT_WEBHOOK_URL}",
+        "secret": "${args.ALERT_WEBHOOK_SECRET}",
+        "restricted": false,
+        "events": {
+          "trigger:service:deployment:status-update": true,
+          "trigger:build:failure": true,
+          "trigger:job-run:failure": true,
+          "trigger:addon-backup:failure": true,
+          "trigger:resource:certificate-final-failure": true
+        }
+      }
+    ],
+    "logDrains": [
+      {
+        "name": "amazing-goats-logs",
+        "type": "RAW_WEBHOOK",
+        "webhook": "${args.LOG_DRAIN_URL}",
+        "secret": "${args.LOG_DRAIN_SECRET}"
+      }
+    ]
+  },
+  "koyeb": {
+    "app": "amazing-goats-noncore",
+    "notificationIntegrations": [
+      {
+        "name": "amazing-goats-noncore-alerts",
+        "type": "RAW_WEBHOOK",
+        "webhook": "${args.ALERT_WEBHOOK_URL}",
+        "secret": "${args.ALERT_WEBHOOK_SECRET}",
+        "events": {
+          "deployment_health_check_failed": true,
+          "instance_crashed": true
+        }
+      }
+    ]
+  },
+  "application": {
+    "$comment": "The stock service posts cold-chain alerts to ALERT_WEBHOOK_URL (see services/stock/src/temperature). One webhook receives both platform and application alerts so an operator watches one channel.",
+    "alertWebhookEnv": ["ALERT_WEBHOOK_URL", "ALERT_WEBHOOK_SECRET"],
+    "healthPath": "/health"
+  }
+}
