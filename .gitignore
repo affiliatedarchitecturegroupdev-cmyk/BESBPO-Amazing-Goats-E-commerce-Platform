@@ -9,3 +9,6 @@ __pycache__
 *.log
 coverage
 .DS_Store
+
+# TypeScript incremental build info
+*.tsbuildinfo
