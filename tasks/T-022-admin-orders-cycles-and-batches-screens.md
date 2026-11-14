@@ -10,8 +10,8 @@ files: ["apps/admin/**"]
 Admin: orders, cycles and batches screens.
 
 ## Acceptance
-- [ ] Menu driven by permissions
-- [ ] Tests added and passing
+- [x] Menu driven by permissions
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.
