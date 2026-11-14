@@ -1,0 +1,77 @@
+# Koyeb hosts the non-core services (analytics, reporting, forecasts, staging
+# and previews). The core platform runs on Northflank in Johannesburg; Koyeb has
+# no African region, so this file deploys to FRA (Frankfurt), the closest core
+# region to South Africa, over Koyeb's edge network.
+#
+# Apply with the Koyeb CLI:
+#   koyeb compose infra/koyeb/koyeb-compose.yaml
+#
+# Secrets are never committed. Create them in the Koyeb control panel or with
+# `koyeb secret create <name> --value <value>` and reference them by name below.
+app:
+  name: amazing-goats-noncore
+
+services:
+  - definition:
+      name: analytics
+      type: WEB
+      git:
+        repository: github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform
+        branch: main
+        workdir: services/analytics
+        docker:
+          dockerfile: Dockerfile
+      regions:
+        - fra
+      instance_types:
+        - scopes: ['region:fra']
+          type: 'nano'
+      scalings:
+        - scopes: ['region:fra']
+          min: 1
+          max: 1
+      ports:
+        - port: 8000
+          protocol: http
+      routes:
+        - port: 8000
+          path: '/'
+      health_checks:
+        - http:
+            path: /health
+            port: 8000
+      env:
+        - key: DATABASE_URL
+          secret: ag-analytics-db-url
+
+  - definition:
+      name: ai-forecast
+      type: WEB
+      git:
+        repository: github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform
+        branch: main
+        workdir: services/ai-forecast
+        docker:
+          dockerfile: Dockerfile
+      regions:
+        - fra
+      instance_types:
+        - scopes: ['region:fra']
+          type: 'nano'
+      scalings:
+        - scopes: ['region:fra']
+          min: 1
+          max: 1
+      ports:
+        - port: 8000
+          protocol: http
+      routes:
+        - port: 8000
+          path: '/'
+      health_checks:
+        - http:
+            path: /health
+            port: 8000
+      env:
+        - key: DATABASE_URL
+          secret: ag-analytics-db-url
