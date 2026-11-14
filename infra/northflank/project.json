@@ -17,6 +17,10 @@
     "LULAPAY_API_KEY": "",
     "WHATSAPP_TOKEN": "",
     "SMTP_URL": "",
+    "ALERT_WEBHOOK_URL": "",
+    "ALERT_WEBHOOK_SECRET": "",
+    "LOG_DRAIN_URL": "",
+    "LOG_DRAIN_SECRET": "",
     "STORE_URL": "https://amazinggoats.store",
     "CORPORATE_URL": "https://amazinggoats.besbpo.co.za",
     "ORDERS_EMAIL": "orders@amazinggoats.store"
@@ -118,6 +122,8 @@
                       "LULAPAY_API_KEY": "${args.LULAPAY_API_KEY}",
                       "WHATSAPP_TOKEN": "${args.WHATSAPP_TOKEN}",
                       "SMTP_URL": "${args.SMTP_URL}",
+                      "ALERT_WEBHOOK_URL": "${args.ALERT_WEBHOOK_URL}",
+                      "ALERT_WEBHOOK_SECRET": "${args.ALERT_WEBHOOK_SECRET}",
                       "STORE_URL": "${args.STORE_URL}",
                       "CORPORATE_URL": "${args.CORPORATE_URL}",
                       "ORDERS_EMAIL": "${args.ORDERS_EMAIL}"
@@ -426,7 +432,7 @@
                     {
                       "protocol": "HTTP",
                       "type": "readinessProbe",
-                      "path": "/",
+                      "path": "/health",
                       "port": 3000,
                       "initialDelaySeconds": 15,
                       "periodSeconds": 30,

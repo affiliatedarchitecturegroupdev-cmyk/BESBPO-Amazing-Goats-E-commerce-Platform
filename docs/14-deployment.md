@@ -85,8 +85,8 @@ the code:
 - every service node names a Dockerfile that exists, and its port equals the
   `PORT` default in that service's `main.ts` (or `EXPOSE 3000` for a Next.js
   app);
-- every HTTP health path is one the app serves (`/health` for Nest and FastAPI
-  services, `/` for the storefront);
+- every HTTP health path is one the app serves (`/health` for every service and
+  every Next.js app, which serves it from `app/health/route.ts`);
 - the Koyeb services build existing Dockerfiles in real regions and reference
   secrets by name, never by value.
 
@@ -101,4 +101,5 @@ vitest run --config vitest.deploy.config.mjs
 The other Next.js apps (`trade-portal`, `admin`, `driver-pwa`,
 `advertiser-portal`, `partner-portal`) follow the storefront: a `CombinedService`
 node on port 3000 with `dockerFilePath` `/apps/<name>/Dockerfile` and an HTTP
-health check on `/`. Add them when they have something to serve.
+health check on `/health`, served by `app/health/route.ts`. Add them when they
+have something to serve.

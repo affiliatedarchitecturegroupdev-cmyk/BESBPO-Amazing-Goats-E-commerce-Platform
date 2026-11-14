@@ -94,16 +94,18 @@ describe('Northflank template (infra/northflank/project.json)', () => {
       expect(check.protocol, `${name} health protocol`).toBe('HTTP');
       expect(check.port, `${name} health port`).toBe(expected);
 
-      // Nest services serve GET /health; the storefront serves its home page at /.
+      // Every deployable serves a dedicated GET /health (T-034). Nest services
+      // use a controller; Next.js apps use a route handler.
+      expect(check.path, `${name} health path`).toBe('/health');
       if (dir.startsWith('services/')) {
-        expect(check.path, `${name} health path`).toBe('/health');
         expect(
           exists(join(dir, 'src', 'health', 'health.controller.ts')),
           `${name} has no health controller`,
         ).toBe(true);
       } else {
-        expect(check.path).toBe('/');
-        expect(exists(join(dir, 'app', 'page.tsx')), `${name} has no home page`).toBe(true);
+        expect(exists(join(dir, 'app', 'health', 'route.ts')), `${name} has no health route`).toBe(
+          true,
+        );
       }
     }
   });
@@ -162,5 +164,64 @@ describe('Koyeb compose (infra/koyeb/koyeb-compose.yaml)', () => {
         expect(env.secret, `${entry.definition.name}: ${env.key} has no secret`).toBeTruthy();
       }
     }
+  });
+});
+
+// Observability wiring (T-034). Platform alerts and application alerts both
+// reach one webhook, so the manifest must name the same environment variables
+// the stock service reads and reference every secret by template argument.
+describe('Observability manifest (infra/observability/notification-integration.json)', () => {
+  const obs = readJson('infra/observability/notification-integration.json');
+
+  it('wires a Northflank and a Koyeb notification integration to one webhook', () => {
+    for (const provider of ['northflank', 'koyeb']) {
+      const integrations = obs[provider].notificationIntegrations;
+      expect(integrations.length, `${provider} integrations`).toBeGreaterThan(0);
+      for (const integration of integrations) {
+        expect(integration.type).toBe('RAW_WEBHOOK');
+        expect(integration.webhook).toBe('${args.ALERT_WEBHOOK_URL}');
+      }
+    }
+  });
+
+  it('watches the events an operator must see', () => {
+    const events = obs.northflank.notificationIntegrations[0].events;
+    for (const name of [
+      'trigger:service:deployment:status-update',
+      'trigger:build:failure',
+      'trigger:job-run:failure',
+      'trigger:addon-backup:failure',
+    ]) {
+      expect(events[name], name).toBe(true);
+    }
+  });
+
+  it('checks in no plaintext secret', () => {
+    const text = readFileSync(
+      join(root, 'infra/observability/notification-integration.json'),
+      'utf8',
+    );
+    const json = JSON.parse(text);
+    const walk = (value) => {
+      if (Array.isArray(value)) return value.forEach(walk);
+      if (value && typeof value === 'object') {
+        for (const [key, child] of Object.entries(value)) {
+          if (
+            /(SECRET|TOKEN|KEY|PASSWORD|CREDENTIAL|URL)/i.test(key) &&
+            typeof child === 'string' &&
+            child.length > 0
+          ) {
+            expect(child, `${key} is not a template argument`).toMatch(/^\$\{args\.[A-Z0-9_]+\}$/);
+          }
+          walk(child);
+        }
+      }
+    };
+    walk(json);
+  });
+
+  it('names the environment variables the application reads', () => {
+    expect(obs.application.alertWebhookEnv).toEqual(['ALERT_WEBHOOK_URL', 'ALERT_WEBHOOK_SECRET']);
+    expect(obs.application.healthPath).toBe('/health');
   });
 });
