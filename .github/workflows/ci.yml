@@ -1,5 +1,8 @@
 name: ci
-on: [pull_request]
+on:
+  pull_request:
+  push:
+    branches: [main]
 jobs:
   node:
     runs-on: ubuntu-latest
@@ -12,7 +15,8 @@ jobs:
       # Shared workspace packages must be built first so consumers resolve @ag/* types.
       - run: pnpm --filter "./packages/*" build
       - run: pnpm -r lint
-      - run: pnpm -r test
+      # `pnpm test` runs every workspace suite plus the root bootstrap contract.
+      - run: pnpm test
   python:
     runs-on: ubuntu-latest
     steps:

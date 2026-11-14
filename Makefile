@@ -1,10 +1,11 @@
 .PHONY: bootstrap dev test lint db-migrate db-reset db-test wireframes
 bootstrap:
 	corepack enable && pnpm install
+	pnpm test
 dev:
 	docker compose -f infra/docker-compose.yml up -d
 test:
-	pnpm -r test
+	pnpm test
 lint:
 	pnpm -r lint
 db-migrate:

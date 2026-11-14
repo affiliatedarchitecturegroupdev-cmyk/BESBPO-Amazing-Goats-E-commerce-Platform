@@ -12,9 +12,15 @@ corepack enable && pnpm install
 cp .env.example .env
 docker compose -f infra/docker-compose.yml up -d     # Postgres, Redis, Mailpit
 make db-migrate                                       # applies db/migrations in order
-pnpm -r test                                          # vitest across packages and services
+pnpm test                                             # every workspace, plus the bootstrap contract
 pnpm --filter @ag/storefront dev                      # http://localhost:3000
 ```
+
+`pnpm test` is the whole gate: it runs every workspace suite and then the root
+bootstrap contract (`scripts/bootstrap.spec.mjs`), which checks the monorepo
+wiring itself (workspace scripts, lockfile in step, files CI needs). CI runs the
+same commands, so a green `pnpm test` locally means a green `node` job. `make
+bootstrap` is install plus that check.
 
 ## Layout
 ```
