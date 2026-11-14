@@ -10,9 +10,9 @@ files: ["services/stock/**"]
 Stock, batches and traceability.
 
 ## Acceptance
-- [ ] Batch record per pack
-- [ ] Recall finds all affected orders
-- [ ] Tests added and passing
+- [x] Batch record per pack
+- [x] Recall finds all affected orders
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.
