@@ -30,3 +30,6 @@ POPIA (consent, minimal personal data, access logging), Consumer Protection Act,
 
 ## Style
 TypeScript strict, small modules, pure functions for business rules, DTO validation with class-validator, OpenAPI for every service, conventional commits.
+
+## Agent workflow note
+When branching from `main`, do not run `git reset --hard` (or `git checkout -f`) while the working tree has uncommitted edits to already-tracked files: it discards them, and a later commit then contains only newly-added files. Commit or `git stash -u` first, and check `git status` is clean before switching branches.

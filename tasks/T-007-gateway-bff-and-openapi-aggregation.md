@@ -10,8 +10,8 @@ files: ["services/gateway/**"]
 Gateway BFF and OpenAPI aggregation.
 
 ## Acceptance
-- [ ] Storefront can fetch catalogue through the gateway
-- [ ] Tests added and passing
+- [x] Storefront can fetch catalogue through the gateway
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.
