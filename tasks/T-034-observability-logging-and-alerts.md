@@ -10,9 +10,10 @@ files: ["infra/**"]
 Observability, logging and alerts.
 
 ## Acceptance
-- [ ] Health checks on all services
-- [ ] Alert on temperature breach
-- [ ] Tests added and passing
+- [x] Health checks on all services
+- [x] Alert on temperature breach
+- [x] Tests added and passing
 
 ## Notes
-See docs for the relevant design section. Ask the human before touching gated paths.
+Delivered in PR #26 as `@ag/observability` plus `GET /health` on every deployable and
+cold-chain alerts. See `docs/15-observability.md` and ADR `0006`.
