@@ -4,6 +4,9 @@ import type { PaymentProvider } from './provider.interface';
 import { PeachProvider } from './peach.provider';
 import { PayFastProvider } from './payfast.provider';
 import { StitchProvider } from './stitch.provider';
+import { TradeSafeProvider } from './tradesafe.provider';
+import { LulaPayProvider } from './lulapay.provider';
+import { lulapayEnabled } from './feature-flags';
 
 /** Injection token for the registered adapters, so tests can supply fakes. */
 export const PROVIDER_REGISTRY = Symbol('PROVIDER_REGISTRY');
@@ -88,6 +91,26 @@ export function providersFromEnv(env: NodeJS.ProcessEnv = process.env): PaymentP
         clientId: env.STITCH_CLIENT_ID,
         clientSecret: env.STITCH_CLIENT_SECRET,
         webhookSecret: env.STITCH_WEBHOOK_SECRET ?? '',
+      }),
+    );
+  }
+  if (env.TRADESAFE_CLIENT_ID && env.TRADESAFE_CLIENT_SECRET) {
+    providers.push(
+      new TradeSafeProvider({
+        clientId: env.TRADESAFE_CLIENT_ID,
+        clientSecret: env.TRADESAFE_CLIENT_SECRET,
+        webhookSecret: env.TRADESAFE_WEBHOOK_SECRET ?? '',
+      }),
+    );
+  }
+  // LulaPay is a pilot: register it only when the flag is on, so a stray route
+  // cannot reach it while the pilot is off.
+  if (lulapayEnabled(env) && env.LULAPAY_API_KEY) {
+    providers.push(
+      new LulaPayProvider({
+        apiKey: env.LULAPAY_API_KEY,
+        webhookSecret: env.LULAPAY_WEBHOOK_SECRET ?? '',
+        enabled: true,
       }),
     );
   }
