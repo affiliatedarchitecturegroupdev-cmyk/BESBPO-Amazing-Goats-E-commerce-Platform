@@ -3,6 +3,7 @@ import type { Method, Provider } from '../routing/route-payment';
 import type { PaymentProvider } from './provider.interface';
 import { PeachProvider } from './peach.provider';
 import { PayFastProvider } from './payfast.provider';
+import { StitchProvider } from './stitch.provider';
 
 /** Injection token for the registered adapters, so tests can supply fakes. */
 export const PROVIDER_REGISTRY = Symbol('PROVIDER_REGISTRY');
@@ -78,6 +79,15 @@ export function providersFromEnv(env: NodeJS.ProcessEnv = process.env): PaymentP
         merchantId: env.PAYFAST_MERCHANT_ID,
         merchantKey: env.PAYFAST_MERCHANT_KEY,
         passphrase: env.PAYFAST_PASSPHRASE ?? '',
+      }),
+    );
+  }
+  if (env.STITCH_CLIENT_ID && env.STITCH_CLIENT_SECRET) {
+    providers.push(
+      new StitchProvider({
+        clientId: env.STITCH_CLIENT_ID,
+        clientSecret: env.STITCH_CLIENT_SECRET,
+        webhookSecret: env.STITCH_WEBHOOK_SECRET ?? '',
       }),
     );
   }
