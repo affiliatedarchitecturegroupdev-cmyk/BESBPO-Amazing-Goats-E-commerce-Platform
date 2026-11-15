@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { Method, Provider } from '../routing/route-payment';
 import type { PaymentProvider } from './provider.interface';
 import { PeachProvider } from './peach.provider';
+import { PayFastProvider } from './payfast.provider';
 
 /** Injection token for the registered adapters, so tests can supply fakes. */
 export const PROVIDER_REGISTRY = Symbol('PROVIDER_REGISTRY');
@@ -68,6 +69,15 @@ export function providersFromEnv(env: NodeJS.ProcessEnv = process.env): PaymentP
         entityId: env.PEACH_ENTITY_ID,
         accessToken: env.PEACH_ACCESS_TOKEN,
         webhookSecret: env.PEACH_WEBHOOK_SECRET ?? '',
+      }),
+    );
+  }
+  if (env.PAYFAST_MERCHANT_ID && env.PAYFAST_MERCHANT_KEY) {
+    providers.push(
+      new PayFastProvider({
+        merchantId: env.PAYFAST_MERCHANT_ID,
+        merchantKey: env.PAYFAST_MERCHANT_KEY,
+        passphrase: env.PAYFAST_PASSPHRASE ?? '',
       }),
     );
   }

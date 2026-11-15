@@ -12,12 +12,16 @@ import type {
 import type { Provider } from '../routing/route-payment';
 
 class FakeProvider implements PaymentProvider {
-  readonly id: Provider = 'peach';
-  constructor(private readonly status: PaymentResult['status'] = 'pending') {}
+  constructor(
+    readonly id: Provider = 'peach',
+    private readonly status: PaymentResult['status'] = 'pending',
+    private readonly fail = false,
+  ) {}
   supports(): boolean {
     return true;
   }
   async createPayment(): Promise<PaymentResult> {
+    if (this.fail) throw new Error(`${this.id} is down`);
     return { providerRef: 'ch_1', status: this.status, redirectUrl: 'https://peach.test/pay' };
   }
   async refund(): Promise<RefundResult> {
@@ -41,7 +45,7 @@ class FakeProvider implements PaymentProvider {
 
 function makeService(status: PaymentResult['status'] = 'pending') {
   const store = new InMemoryIntentStore();
-  const providers = new ProvidersService([new FakeProvider(status)]);
+  const providers = new ProvidersService([new FakeProvider('peach', status)]);
   return { service: new IntentsService(store, providers), store };
 }
 
@@ -79,6 +83,36 @@ describe('IntentsService', () => {
     await expect(
       service.create({ idempotencyKey: 'k1', method: 'card', amountIncVatCents: 1000 }),
     ).rejects.toThrow(/no configured provider/);
+  });
+
+  it('falls back to the next routed provider when the primary fails', async () => {
+    const store = new InMemoryIntentStore();
+    // card routes to peach, payfast, stitch; only payfast and stitch are configured,
+    // and payfast is down, so stitch is used.
+    const providers = new ProvidersService([
+      new FakeProvider('payfast', 'pending', true),
+      new FakeProvider('stitch', 'pending', false),
+    ]);
+    const service = new IntentsService(store, providers);
+    const intent = await service.create({
+      idempotencyKey: 'k1',
+      method: 'card',
+      amountIncVatCents: 1000,
+    });
+    expect(intent.provider).toBe('stitch');
+  });
+
+  it('answers 503 when every routed provider fails', async () => {
+    const store = new InMemoryIntentStore();
+    const providers = new ProvidersService([
+      new FakeProvider('peach', 'pending', true),
+      new FakeProvider('payfast', 'pending', true),
+      new FakeProvider('stitch', 'pending', true),
+    ]);
+    const service = new IntentsService(store, providers);
+    await expect(
+      service.create({ idempotencyKey: 'k1', method: 'card', amountIncVatCents: 1000 }),
+    ).rejects.toThrow(/every provider failed/);
   });
 
   it('applies a verified webhook to the matching intent', async () => {

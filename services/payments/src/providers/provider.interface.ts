@@ -22,6 +22,11 @@ export interface PaymentResult {
   status: ProviderPaymentStatus;
   /** Where to send the customer for hosted fields or a redirect. */
   redirectUrl?: string;
+  /**
+   * Providers that take the customer to a hosted page by form POST (PayFast)
+   * rather than a plain redirect. The storefront posts these fields to `action`.
+   */
+  form?: { action: string; fields: Record<string, string> };
 }
 
 export interface RefundRequest {
