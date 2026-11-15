@@ -96,3 +96,24 @@ key, so a fallback cannot charge twice. A provider that throws is recorded with 
 message — never the raw error object, which could carry a credential — and if every
 provider fails the request is answered `503`. A failure that happened _after_ a provider
 reference was returned is not retried, because the charge may already exist.
+
+## Stitch adapter
+`services/payments/src/providers/stitch.provider.ts` maps Stitch onto the interface.
+Stitch fronts the bank rails — Pay by Bank (Capitec Pay, Absa Pay, PayShap Request) for
+pay by bank, and Capitec variable-recurring consents for trade collections. It is a
+hosted **redirect** provider, so `createPayment` returns the Stitch-hosted `redirectUrl`.
+It reads `STITCH_CLIENT_ID`, `STITCH_CLIENT_SECRET` and `STITCH_WEBHOOK_SECRET`.
+
+Its API is **GraphQL** (`POST https://api.stitch.money/graphql`), so the adapter sends a
+`clientPaymentInitiationRequestCreate` mutation for pay by bank and a
+`clientPaymentConsentRequestCreate` mutation (`type: CAPITEC_PAY_RECURRING`) for a
+recurring debit. Because Stitch includes *every* method enabled on the client by default,
+the request sets `paymentMethods` explicitly, so a pay-by-bank request cannot silently
+offer card. Its webhooks are delivered through **Svix**, so `verifyWebhook` checks the
+`svix-id`/`svix-timestamp`/`svix-signature` headers with `verifySvixSignature`
+(`webhook-signature.ts`, tested): the signed content is `"<id>.<timestamp>.<rawBody>"` and
+the expected value is `base64(HMAC-SHA256(base64(secret), signedContent))`, any entry in a
+space-delimited `v1,<base64>` list passing, with the same replay window as the HMAC check.
+`PaymentInitiationRequestCompleted`/`Cancelled`/`Expired` map onto
+`succeeded`/`cancelled`/`failed`. `refund` calls `refundTransactionInitiate`, idempotent by
+the intent's `nonce`.
