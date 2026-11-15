@@ -8,6 +8,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { ReconciliationModule } from './reconciliation/reconciliation.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { PayoutsModule } from './payouts/payouts.module';
+import { ChargebacksModule } from './chargebacks/chargebacks.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PayoutsModule } from './payouts/payouts.module';
     ReconciliationModule,
     RefundsModule,
     PayoutsModule,
+    ChargebacksModule,
   ],
   controllers: [HealthController],
   providers: [

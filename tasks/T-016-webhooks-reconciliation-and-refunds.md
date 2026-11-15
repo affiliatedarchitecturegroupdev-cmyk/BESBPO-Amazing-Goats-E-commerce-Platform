@@ -10,9 +10,9 @@ files: ["services/payments/**"]
 Webhooks, reconciliation and refunds.
 
 ## Acceptance
-- [ ] Daily settlement matched to bank (`payments.settlements` + `payments.settlement_lines`)
-- [ ] Refund needs second approver above limit (`payments.refunds.requested_by` != `approved_by`)
-- [ ] Tests added and passing
+- [x] Daily settlement matched to bank (`payments.settlements` + `payments.settlement_lines`)
+- [x] Refund needs second approver above limit (`payments.refunds.requested_by` != `approved_by`)
+- [x] Tests added and passing
 
 ## Notes
 **Re-scoped 2026-11-14.** The webhook delivery half of this task already landed with
