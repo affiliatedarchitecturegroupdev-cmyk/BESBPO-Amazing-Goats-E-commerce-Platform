@@ -1,6 +1,7 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { routePayment } from '../routing/route-payment';
 import type { Method, Provider } from '../routing/route-payment';
+import { withFallback } from '../routing/provider-fallback';
 import { ProvidersService } from '../providers/providers.service';
 import {
   IdempotencyStore,
@@ -9,7 +10,7 @@ import {
   canTransition,
   createIntent,
 } from '../providers/payment-intent';
-import type { WebhookEvent, WebhookInput } from '../providers/provider.interface';
+import type { PaymentResult, WebhookEvent, WebhookInput } from '../providers/provider.interface';
 import { IntentStore } from './intents.store';
 
 export const INTENT_STORE = Symbol('INTENT_STORE');
@@ -45,8 +46,9 @@ export class IntentsService {
   /**
    * Idempotent create-and-charge. The intent is created (or the existing one
    * returned) from the idempotency key, then routed to the first configured
-   * provider for the method. A repeat call with the same key returns the stored
-   * intent without charging again.
+   * provider for the method, falling back to the next routed provider when one
+   * fails. A repeat call with the same key returns the stored intent without
+   * charging again.
    */
   async create(input: CreateIntentInput): Promise<PaymentIntent> {
     const idempotency: IdempotencyStore = {
@@ -61,27 +63,35 @@ export class IntentsService {
     const candidates = routePayment({
       method: input.method,
       amountCents: intent.amountIncVatCents,
-    });
-    const chosen = candidates.find((candidate) => this.providers.has(candidate));
-    if (!chosen) {
+    }).filter((candidate) => this.providers.has(candidate));
+    if (candidates.length === 0) {
       throw new NotFoundException(`no configured provider for ${input.method}`);
     }
 
-    const provider = this.providers.get(chosen);
-    const result = await provider.createPayment({
-      intentId: intent.id,
-      amountCents: intent.amountIncVatCents,
-      currency: 'ZAR',
-      method: input.method,
-      reference: input.reference ?? intent.id,
-      idempotencyKey: intent.idempotencyKey,
-      returnUrl: input.returnUrl,
-      notifyUrl: input.notifyUrl,
+    // Each attempt is idempotent at the provider (same key, same amount), so a
+    // fallback after a failed primary cannot charge twice.
+    const outcome = await withFallback(candidates, (providerId) =>
+      this.providers.get(providerId).createPayment({
+        intentId: intent.id,
+        amountCents: intent.amountIncVatCents,
+        currency: 'ZAR',
+        method: input.method,
+        reference: input.reference ?? intent.id,
+        idempotencyKey: intent.idempotencyKey,
+        returnUrl: input.returnUrl,
+        notifyUrl: input.notifyUrl,
+      }),
+    ).catch((error) => {
+      if (error instanceof Error && error.name === 'AllProvidersFailedError') {
+        throw new ServiceUnavailableException(error.message);
+      }
+      throw error;
     });
 
+    const result: PaymentResult = outcome.result;
     const next: PaymentIntent = {
       ...applyStatus(intent, result.status),
-      provider: chosen,
+      provider: outcome.provider,
       providerRef: result.providerRef,
     };
     return this.store.save(next);
