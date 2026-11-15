@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import type { Method } from '../routing/route-payment';
 
 /** Status of a payment intent. `created` until the customer starts paying. */
@@ -57,19 +57,19 @@ export function applyStatus(
 }
 
 export interface IdempotencyStore {
-  get(key: string): PaymentIntent | undefined;
-  put(key: string, intent: PaymentIntent): void;
+  get(key: string): Promise<PaymentIntent | undefined>;
+  put(key: string, intent: PaymentIntent): Promise<void>;
 }
 
 /** In-memory idempotency index; the SQL adapter uses the unique key on `payments.intents`. */
 export class InMemoryIdempotencyStore implements IdempotencyStore {
   private readonly byKey = new Map<string, PaymentIntent>();
 
-  get(key: string): PaymentIntent | undefined {
+  async get(key: string): Promise<PaymentIntent | undefined> {
     return this.byKey.get(key);
   }
 
-  put(key: string, intent: PaymentIntent): void {
+  async put(key: string, intent: PaymentIntent): Promise<void> {
     this.byKey.set(key, intent);
   }
 }
@@ -81,7 +81,7 @@ export class InMemoryIdempotencyStore implements IdempotencyStore {
  * caller error and throws, because silently returning the first intent would
  * hide a real mismatch.
  */
-export function createIntent(
+export async function createIntent(
   input: {
     idempotencyKey: string;
     method: Method;
@@ -92,13 +92,13 @@ export function createIntent(
     now?: Date;
   },
   store: IdempotencyStore,
-): PaymentIntent {
+): Promise<PaymentIntent> {
   if (!input.idempotencyKey) throw new Error('an idempotency key is required');
   if (!Number.isInteger(input.amountIncVatCents) || input.amountIncVatCents <= 0) {
     throw new Error('amount must be a positive integer number of cents');
   }
 
-  const existing = store.get(input.idempotencyKey);
+  const existing = await store.get(input.idempotencyKey);
   if (existing) {
     if (existing.amountIncVatCents !== input.amountIncVatCents) {
       throw new Error(`idempotency key ${input.idempotencyKey} was used with a different amount`);
@@ -108,7 +108,7 @@ export function createIntent(
 
   const now = input.now ?? new Date();
   const intent: PaymentIntent = {
-    id: `pi_${createHash('sha256').update(input.idempotencyKey).digest('hex').slice(0, 24)}`,
+    id: randomUUID(),
     orderId: input.orderId,
     invoiceId: input.invoiceId,
     method: input.method,
@@ -118,6 +118,6 @@ export function createIntent(
     idempotencyKey: input.idempotencyKey,
     createdAt: now.toISOString(),
   };
-  store.put(input.idempotencyKey, intent);
+  await store.put(input.idempotencyKey, intent);
   return intent;
 }

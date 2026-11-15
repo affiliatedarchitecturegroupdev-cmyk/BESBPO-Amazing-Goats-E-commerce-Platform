@@ -8,9 +8,9 @@ import {
 } from './payment-intent';
 
 describe('createIntent', () => {
-  it('creates an intent in the created state', () => {
+  it('creates an intent in the created state', async () => {
     const store = new InMemoryIdempotencyStore();
-    const intent = createIntent(
+    const intent = await createIntent(
       { idempotencyKey: 'k1', method: 'card', amountIncVatCents: 310_500 },
       store,
     );
@@ -19,39 +19,39 @@ describe('createIntent', () => {
     expect(intent.amountIncVatCents).toBe(310_500);
   });
 
-  it('returns the same intent for the same idempotency key', () => {
+  it('returns the same intent for the same idempotency key', async () => {
     const store = new InMemoryIdempotencyStore();
-    const first = createIntent(
+    const first = await createIntent(
       { idempotencyKey: 'k1', method: 'card', amountIncVatCents: 1000 },
       store,
     );
-    const second = createIntent(
+    const second = await createIntent(
       { idempotencyKey: 'k1', method: 'card', amountIncVatCents: 1000 },
       store,
     );
     expect(second.id).toBe(first.id);
-    expect(store.get('k1')).toEqual(first);
+    expect(await store.get('k1')).toEqual(first);
   });
 
-  it('rejects a key reused with a different amount', () => {
+  it('rejects a key reused with a different amount', async () => {
     const store = new InMemoryIdempotencyStore();
-    createIntent({ idempotencyKey: 'k1', method: 'card', amountIncVatCents: 1000 }, store);
-    expect(() =>
+    await createIntent({ idempotencyKey: 'k1', method: 'card', amountIncVatCents: 1000 }, store);
+    await expect(
       createIntent({ idempotencyKey: 'k1', method: 'card', amountIncVatCents: 2000 }, store),
-    ).toThrow(/different amount/);
+    ).rejects.toThrow(/different amount/);
   });
 
-  it('requires a positive integer amount and a key', () => {
+  it('requires a positive integer amount and a key', async () => {
     const store = new InMemoryIdempotencyStore();
-    expect(() =>
+    await expect(
       createIntent({ idempotencyKey: '', method: 'card', amountIncVatCents: 100 }, store),
-    ).toThrow();
-    expect(() =>
+    ).rejects.toThrow();
+    await expect(
       createIntent({ idempotencyKey: 'k', method: 'card', amountIncVatCents: 0 }, store),
-    ).toThrow();
-    expect(() =>
+    ).rejects.toThrow();
+    await expect(
       createIntent({ idempotencyKey: 'k', method: 'card', amountIncVatCents: 1.5 }, store),
-    ).toThrow();
+    ).rejects.toThrow();
   });
 });
 
@@ -65,9 +65,9 @@ describe('intent status machine', () => {
     expect(isTerminal('created')).toBe(false);
   });
 
-  it('is idempotent when the status is unchanged', () => {
+  it('is idempotent when the status is unchanged', async () => {
     const store = new InMemoryIdempotencyStore();
-    const intent = createIntent(
+    const intent = await createIntent(
       { idempotencyKey: 'k1', method: 'card', amountIncVatCents: 1000 },
       store,
     );
@@ -75,10 +75,10 @@ describe('intent status machine', () => {
     expect(same).toBe(intent);
   });
 
-  it('throws on an illegal transition', () => {
+  it('throws on an illegal transition', async () => {
     const store = new InMemoryIdempotencyStore();
     const intent = {
-      ...createIntent({ idempotencyKey: 'k1', method: 'card', amountIncVatCents: 1000 }, store),
+      ...(await createIntent({ idempotencyKey: 'k1', method: 'card', amountIncVatCents: 1000 }, store)),
       status: 'succeeded' as const,
     };
     expect(() => applyStatus(intent, 'failed')).toThrow(/cannot move intent/);

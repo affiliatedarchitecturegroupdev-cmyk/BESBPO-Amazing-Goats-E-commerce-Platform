@@ -1,37 +1,37 @@
 import { PaymentIntent } from '../providers/payment-intent';
 
-/** Persistence boundary for intents; the SQL adapter lands with the payments schema swap. */
+/** Persistence boundary for intents; the SQL adapter is over `payments.intents`. */
 export interface IntentStore {
-  getById(id: string): PaymentIntent | undefined;
-  getByIdempotencyKey(key: string): PaymentIntent | undefined;
-  findByProviderRef(providerRef: string): PaymentIntent | undefined;
-  list(): PaymentIntent[];
-  save(intent: PaymentIntent): PaymentIntent;
+  getById(id: string): Promise<PaymentIntent | undefined>;
+  getByIdempotencyKey(key: string): Promise<PaymentIntent | undefined>;
+  findByProviderRef(providerRef: string): Promise<PaymentIntent | undefined>;
+  list(): Promise<PaymentIntent[]>;
+  save(intent: PaymentIntent): Promise<PaymentIntent>;
 }
 
-/** In-memory intent store used by tests and local runs until the SQL adapter is wired. */
+/** In-memory intent store used by tests and local runs; the default driver. */
 export class InMemoryIntentStore implements IntentStore {
   private readonly byId = new Map<string, PaymentIntent>();
   private readonly byKey = new Map<string, PaymentIntent>();
   private readonly byRef = new Map<string, PaymentIntent>();
 
-  getById(id: string): PaymentIntent | undefined {
+  async getById(id: string): Promise<PaymentIntent | undefined> {
     return this.byId.get(id);
   }
 
-  getByIdempotencyKey(key: string): PaymentIntent | undefined {
+  async getByIdempotencyKey(key: string): Promise<PaymentIntent | undefined> {
     return this.byKey.get(key);
   }
 
-  findByProviderRef(providerRef: string): PaymentIntent | undefined {
+  async findByProviderRef(providerRef: string): Promise<PaymentIntent | undefined> {
     return this.byRef.get(providerRef);
   }
 
-  list(): PaymentIntent[] {
+  async list(): Promise<PaymentIntent[]> {
     return [...this.byId.values()];
   }
 
-  save(intent: PaymentIntent): PaymentIntent {
+  async save(intent: PaymentIntent): Promise<PaymentIntent> {
     this.byId.set(intent.id, intent);
     this.byKey.set(intent.idempotencyKey, intent);
     if (intent.providerRef) this.byRef.set(intent.providerRef, intent);

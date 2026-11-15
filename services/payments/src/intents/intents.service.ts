@@ -33,12 +33,12 @@ export class IntentsService {
     private readonly providers: ProvidersService,
   ) {}
 
-  list(): PaymentIntent[] {
-    return this.store.list().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  async list(): Promise<PaymentIntent[]> {
+    return (await this.store.list()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
-  get(id: string): PaymentIntent {
-    const intent = this.store.getById(id);
+  async get(id: string): Promise<PaymentIntent> {
+    const intent = await this.store.getById(id);
     if (!intent) throw new NotFoundException(`unknown payment intent ${id}`);
     return intent;
   }
@@ -53,11 +53,11 @@ export class IntentsService {
   async create(input: CreateIntentInput): Promise<PaymentIntent> {
     const idempotency: IdempotencyStore = {
       get: (key) => this.store.getByIdempotencyKey(key),
-      put: (_key, intent) => {
-        this.store.save(intent);
+      put: async (_key, intent) => {
+        await this.store.save(intent);
       },
     };
-    const intent = createIntent(input, idempotency);
+    const intent = await createIntent(input, idempotency);
     if (intent.providerRef) return intent;
 
     const candidates = routePayment({
@@ -103,18 +103,18 @@ export class IntentsService {
    * stored) but not applied. An out-of-order or illegal transition is ignored
    * rather than failing the request, so the provider is not asked to retry.
    */
-  handleWebhook(
+  async handleWebhook(
     providerId: Provider,
     input: WebhookInput,
-  ): { event: WebhookEvent; intent?: PaymentIntent } {
+  ): Promise<{ event: WebhookEvent; intent?: PaymentIntent }> {
     const provider = this.providers.get(providerId);
     const event = provider.verifyWebhook(input);
 
-    const intent = this.store.findByProviderRef(event.providerRef);
+    const intent = await this.store.findByProviderRef(event.providerRef);
     if (!intent) return { event };
     if (intent.status !== event.status && !canTransition(intent.status, event.status)) {
       return { event, intent };
     }
-    return { event, intent: this.store.save(applyStatus(intent, event.status)) };
+    return { event, intent: await this.store.save(applyStatus(intent, event.status)) };
   }
 }

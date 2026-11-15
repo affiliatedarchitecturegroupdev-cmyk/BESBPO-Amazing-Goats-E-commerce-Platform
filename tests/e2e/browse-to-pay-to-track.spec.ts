@@ -83,21 +83,21 @@ describe('journey: browse to pay to track', () => {
         amount: { quantity: '3105.00' },
       },
     });
-    const result = payments.webhooks.receive('stitch', {
+    const result = await payments.webhooks.receive('stitch', {
       headers: payments.sign(body),
       rawBody: body,
     });
     expect(result.received).toBe(true);
     expect(result.duplicate).toBe(false);
-    expect(payments.intents.get(intent.id).status).toBe('succeeded');
+    expect((await payments.intents.get(intent.id)).status).toBe('succeeded');
 
     // A retried delivery of the same event is a no-op.
-    const replay = payments.webhooks.receive('stitch', {
+    const replay = await payments.webhooks.receive('stitch', {
       headers: payments.sign(body),
       rawBody: body,
     });
     expect(replay.duplicate).toBe(true);
-    expect(payments.intents.list()).toHaveLength(1);
+    expect(await payments.intents.list()).toHaveLength(1);
 
     // 6. Track: the driver marks the stop delivered and the order tracks through.
     const logistics = new DriverSyncService(new InMemorySyncEventStore());

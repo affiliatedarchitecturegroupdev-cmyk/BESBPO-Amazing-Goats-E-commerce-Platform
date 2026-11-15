@@ -62,9 +62,10 @@ resend. `GET /payments/webhooks` (behind `payments:read`) lists received events.
 `services/payments/src/providers/peach.provider.ts` maps Peach onto the interface: a
 bearer-token checkout (`POST /v2/checkout`) and refunds, its status codes onto
 `succeeded`/`failed`/`cancelled`/`pending`, and its webhook signature. It reads
-`PEACH_ENTITY_ID`, `PEACH_ACCESS_TOKEN` and `PEACH_WEBHOOK_SECRET`. The store is
-in-memory for now (`InMemoryIntentStore`, `InMemoryWebhookStore`); the SQL adapters for
-`payments.intents` and `payments.provider_events` land with the store swap.
+`PEACH_ENTITY_ID`, `PEACH_ACCESS_TOKEN` and `PEACH_WEBHOOK_SECRET`. The store is in-memory
+by default (`InMemoryIntentStore`, `InMemoryWebhookStore`); with `STORE_DRIVER=sql` the
+SQL adapters over `payments.intents` and `payments.provider_events` are used (see
+"Persistence" below).
 
 ## PayFast adapter
 
@@ -151,7 +152,23 @@ whatever the transport, and `refunds:approve`/`payouts:approve` stay in `TWO_PER
   payout** so the money is held before it leaves. A payout that is already `paid` cannot be
   clawed back, so freezing is a no-op on it.
 
-The stores are in-memory (`InMemoryRefundsStore`, `InMemoryPayoutsStore`,
-`InMemoryReconciliationStore`, `InMemoryChargebacksStore`) until the SQL adapters land with
-the store swap.
+The stores are in-memory by default (`InMemoryRefundsStore`, `InMemoryPayoutsStore`,
+`InMemoryReconciliationStore`, `InMemoryChargebacksStore`); with `STORE_DRIVER=sql` the
+SQL adapters over `payments.refunds`, `payments.payouts`, `payments.settlements`/
+`payments.settlement_lines` and `payments.chargebacks` are used (see "Persistence" below).
+
+## Persistence
+
+Each service keeps its business rules as pure functions and puts storage behind a store
+interface with an in-memory default. `STORE_DRIVER=memory` (the default) keeps tests and
+local runs database-free; `STORE_DRIVER=sql` selects the SQL adapters, which require
+`DATABASE_URL` and connect through `@ag/db`.
+
+`@ag/db` owns the one thing every adapter must get right: the row-level-security session.
+`Db.withSession(context, fn)` opens a transaction, applies `app.org_id`, `app.user_id` and
+`app.staff` with a parameterised `set_config(..., true)` (transaction-local, so the values
+cannot be injected and reset with the transaction), runs `fn`, then commits or rolls back.
+The application connects as a `NOSUPERUSER, NOBYPASSRLS` role (see `db/README.md`); a
+superuser or table owner would bypass the policies silently, which the `@ag/db`
+integration test guards against by asserting scoping through such a role.
 
