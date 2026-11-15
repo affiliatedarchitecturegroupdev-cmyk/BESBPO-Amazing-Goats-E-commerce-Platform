@@ -5,7 +5,7 @@ import { PayoutsController } from './payouts.controller';
 import { PayoutsService, PAYOUTS_STORE } from './payouts.service';
 import { InMemoryPayoutsStore, PayoutsStore } from './payouts.store';
 import { PgPayoutsStore } from './payouts.sql-store';
-import { AG_DB } from '../persistence/persistence.module';
+import { AG_DB } from '@ag/nest-db';
 
 @Module({
   controllers: [PayoutsController],

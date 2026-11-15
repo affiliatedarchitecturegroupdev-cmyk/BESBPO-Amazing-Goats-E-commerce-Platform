@@ -1,6 +1,8 @@
 # Data model
 Ten schemas, one per bounded context. See `db/migrations`. Money in cents, UTC times, UUID keys.
 
+A `credit_limits` row is the proposal for an org and carries its decision: `status` is `proposed` until a person approves it (two distinct approvers above the R100,000 threshold), `approved` when in force, or `rejected`. `collection_actions` rows are the dunning plan for an invoice (see `docs/03-credit-control.md`).
+
 | Schema | Main tables |
 |---|---|
 | identity | orgs, users, roles, permissions, role_permissions, user_roles, org_members, api_keys, elevation_requests |

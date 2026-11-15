@@ -1,13 +1,19 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { RequirePermissions } from '@ag/nest-auth';
 import { StatementsService } from './statements.service';
+import { Statement } from './statement.rules';
 
-// TODO(agent): implement per tasks/ backlog. Keep every route behind RequirePermissions.
 @Controller('accounts/statements')
 export class StatementsController {
   constructor(private readonly service: StatementsService) {}
 
-  @Get()
+  /** A trade customer's statement at a date; defaults to today. */
+  @Get(':orgId')
   @RequirePermissions('invoices:read')
-  list() { return this.service.list(); }
+  forOrg(
+    @Param('orgId') orgId: string,
+    @Query('asOf') asOf?: string,
+  ): Promise<Statement> {
+    return this.service.forOrg(orgId, asOf ?? new Date().toISOString().slice(0, 10));
+  }
 }

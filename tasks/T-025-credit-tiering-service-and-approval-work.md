@@ -10,9 +10,9 @@ files: ["services/accounts/**"]
 Credit tiering service and approval workflow.
 
 ## Acceptance
-- [ ] Uses evaluateTier
-- [ ] Large limits need two approvers
-- [ ] Tests added and passing
+- [x] Uses evaluateTier
+- [x] Large limits need two approvers
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.

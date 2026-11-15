@@ -66,3 +66,8 @@ jobs:
       - run: pnpm --filter @ag/payments test
         env:
           DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      # The accounts SQL adapters (credit limits, invoices, collections) exercise
+      # the real accounts schema applied above; they skip without DATABASE_URL.
+      - run: pnpm --filter @ag/accounts test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag

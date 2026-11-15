@@ -11,8 +11,14 @@ const TERMS: Record<Tier, number> = { new: 0, probation: 7, standard: 14, prefer
 const WEEKS: Record<Tier, number> = { new: 0, probation: 1, standard: 2, preferred: 4 };
 export const NCA_TURNOVER_THRESHOLD_CENTS = 100_000_000; // R1,000,000: below this, credit may fall inside the National Credit Act
 
+/**
+ * A limit above this needs approval, and a limit above it needs two approvers
+ * (docs/03-credit-control.md: "two approvers above the threshold"). R100,000.
+ */
+export const CREDIT_APPROVAL_THRESHOLD_CENTS = 10_000_000;
+
 /** Credit is earned and reviewed monthly. A person approves; this function only proposes. */
-export function evaluateTier(i: TierInput, approvalLimitCents = 10_000_000): TierResult {
+export function evaluateTier(i: TierInput, approvalLimitCents = CREDIT_APPROVAL_THRESHOLD_CENTS): TierResult {
   const reasons: string[] = [];
   let idx = ORDER.indexOf(i.currentTier);
   const ncaReview = i.entityType === 'sole_proprietor' || i.turnoverDeclaredCents === null || i.turnoverDeclaredCents < NCA_TURNOVER_THRESHOLD_CENTS;

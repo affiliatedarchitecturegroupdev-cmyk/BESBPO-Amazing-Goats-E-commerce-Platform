@@ -5,7 +5,7 @@ import { WebhooksController } from './webhooks.controller';
 import { WebhooksService, WEBHOOK_STORE } from './webhooks.service';
 import { InMemoryWebhookStore, WebhookStore } from './webhooks.store';
 import { PgWebhookStore } from './webhooks.sql-store';
-import { AG_DB } from '../persistence/persistence.module';
+import { AG_DB } from '@ag/nest-db';
 import { IntentsModule } from '../intents/intents.module';
 
 @Module({
