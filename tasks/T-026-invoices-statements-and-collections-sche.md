@@ -10,9 +10,9 @@ files: ["services/accounts/**"]
 Invoices, statements and collections schedule.
 
 ## Acceptance
-- [ ] Dunning steps scheduled
-- [ ] Account hold at day 14
-- [ ] Tests added and passing
+- [x] Dunning steps scheduled
+- [x] Account hold at day 14
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.

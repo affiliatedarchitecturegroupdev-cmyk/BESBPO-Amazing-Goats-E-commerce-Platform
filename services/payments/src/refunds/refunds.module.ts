@@ -5,7 +5,7 @@ import { RefundsController } from './refunds.controller';
 import { RefundsService, REFUNDS_STORE } from './refunds.service';
 import { InMemoryRefundsStore, RefundsStore } from './refunds.store';
 import { PgRefundsStore } from './refunds.sql-store';
-import { AG_DB } from '../persistence/persistence.module';
+import { AG_DB } from '@ag/nest-db';
 
 @Module({
   controllers: [RefundsController],

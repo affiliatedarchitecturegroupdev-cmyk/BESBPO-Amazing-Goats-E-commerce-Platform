@@ -1,7 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { runWithSession } from '@ag/db';
 import { userFromRequest } from '@ag/nest-auth';
-import { isStaff } from './staff.rules';
+import { isStaff } from '@ag/rbac';
 
 /**
  * Establishes the row-level-security session for each request from the caller

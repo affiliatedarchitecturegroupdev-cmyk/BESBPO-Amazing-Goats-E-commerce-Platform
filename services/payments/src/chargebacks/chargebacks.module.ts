@@ -5,7 +5,7 @@ import { ChargebacksController } from './chargebacks.controller';
 import { ChargebacksService, CHARGEBACKS_STORE } from './chargebacks.service';
 import { InMemoryChargebacksStore, ChargebacksStore } from './chargebacks.store';
 import { PgChargebacksStore } from './chargebacks.sql-store';
-import { AG_DB } from '../persistence/persistence.module';
+import { AG_DB } from '@ag/nest-db';
 import { PayoutsModule } from '../payouts/payouts.module';
 
 @Module({

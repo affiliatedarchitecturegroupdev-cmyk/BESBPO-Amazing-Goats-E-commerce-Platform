@@ -5,7 +5,7 @@ import { ReconciliationController } from './reconciliation.controller';
 import { ReconciliationService, RECONCILIATION_STORE } from './reconciliation.service';
 import { InMemoryReconciliationStore, ReconciliationStore } from './reconciliation.store';
 import { PgReconciliationStore } from './reconciliation.sql-store';
-import { AG_DB } from '../persistence/persistence.module';
+import { AG_DB } from '@ag/nest-db';
 
 @Module({
   controllers: [ReconciliationController],

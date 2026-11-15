@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@ag/db": "workspace:*",
+    "@ag/nest-db": "workspace:*",
     "@ag/nest-auth": "workspace:*",
     "@ag/observability": "workspace:*",
     "@ag/rbac": "workspace:*",

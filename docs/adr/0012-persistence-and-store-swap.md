@@ -9,7 +9,7 @@ persisted. `selectStore(inMemory, buildSql)` keeps the pool (and the `DATABASE_U
 check) lazy — it only runs when the SQL driver is chosen, so a service that never touches
 the database still boots.
 
-The SQL adapters all go through `@ag/db`. It owns the one thing each adapter must get
+The SQL adapters all go through `@ag/db`. The Nest wiring (`PersistenceModule`, the `AG_DB` token and `SessionMiddleware`) lives in `@ag/nest-db`, and `isStaff` lives in `@ag/rbac`, so a second service gets the same session boundary without copying it. It owns the one thing each adapter must get
 right and is easy to get wrong: the row-level-security session. `Db.withSession(context,
 fn)` opens a transaction, applies `app.org_id`, `app.user_id` and `app.staff` with a
 parameterised `set_config(..., true)`, runs `fn`, and commits or rolls back. The `true`

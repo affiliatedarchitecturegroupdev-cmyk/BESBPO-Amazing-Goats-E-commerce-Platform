@@ -5,7 +5,7 @@ import { IntentsController } from './intents.controller';
 import { IntentsService, INTENT_STORE } from './intents.service';
 import { InMemoryIntentStore, IntentStore } from './intents.store';
 import { PgIntentStore } from './intents.sql-store';
-import { AG_DB } from '../persistence/persistence.module';
+import { AG_DB } from '@ag/nest-db';
 import { ProvidersModule } from '../providers/providers.module';
 
 @Module({
