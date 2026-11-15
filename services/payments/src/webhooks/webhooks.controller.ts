@@ -25,7 +25,7 @@ export class WebhooksController {
 
   @Get()
   @RequirePermissions('payments:read')
-  list(): ProviderEventRecord[] {
+  list(): Promise<ProviderEventRecord[]> {
     return this.service.list();
   }
 
@@ -41,7 +41,7 @@ export class WebhooksController {
     @Headers() headers: Record<string, string | string[] | undefined>,
     @Req() request: RawBodyRequest,
     @Body() body: unknown,
-  ): WebhookResult {
+  ): Promise<WebhookResult> {
     const rawBody =
       request.rawBody?.toString('utf8') ?? (typeof body === 'string' ? body : JSON.stringify(body));
     if (!rawBody) throw new BadRequestException('empty body');

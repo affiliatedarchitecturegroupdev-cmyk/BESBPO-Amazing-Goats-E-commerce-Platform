@@ -19,7 +19,7 @@ export class WebhooksService {
     private readonly intents: IntentsService,
   ) {}
 
-  list(): ProviderEventRecord[] {
+  async list(): Promise<ProviderEventRecord[]> {
     return this.store.list();
   }
 
@@ -29,15 +29,15 @@ export class WebhooksService {
    * The event is then deduplicated on `(provider, eventId)` and, when new,
    * applied to the matching intent.
    */
-  receive(provider: Provider, input: WebhookInput): WebhookResult {
-    let handled: ReturnType<IntentsService['handleWebhook']>;
+  async receive(provider: Provider, input: WebhookInput): Promise<WebhookResult> {
+    let handled: Awaited<ReturnType<IntentsService['handleWebhook']>>;
     try {
-      handled = this.intents.handleWebhook(provider, input);
+      handled = await this.intents.handleWebhook(provider, input);
     } catch (error) {
       throw new BadRequestException((error as Error).message);
     }
 
-    const { stored, event } = this.store.record({
+    const { stored, event } = await this.store.record({
       provider,
       eventId: handled.event.id,
       signatureOk: true,

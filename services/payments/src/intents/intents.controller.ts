@@ -21,13 +21,13 @@ export class IntentsController {
 
   @Get()
   @RequirePermissions('payments:read')
-  list(): PaymentIntent[] {
+  list(): Promise<PaymentIntent[]> {
     return this.service.list();
   }
 
   @Get(':id')
   @RequirePermissions('payments:read')
-  get(@Param('id') id: string): PaymentIntent {
+  get(@Param('id') id: string): Promise<PaymentIntent> {
     return this.service.get(id);
   }
 

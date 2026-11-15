@@ -57,7 +57,7 @@ describe('WebhooksService', () => {
       method: 'card',
       amountIncVatCents: 1000,
     });
-    const result = service.receive('peach', {
+    const result = await service.receive('peach', {
       headers: { 'x-ok': '1' },
       rawBody: JSON.stringify({
         id: 'evt_1',
@@ -66,13 +66,15 @@ describe('WebhooksService', () => {
       }),
     });
     expect(result).toEqual({ received: true, duplicate: false, eventId: 'evt_1' });
-    expect(service.list()).toHaveLength(1);
+    expect(await service.list()).toHaveLength(1);
   });
 
-  it('rejects a bad signature with 400 and records nothing', () => {
+  it('rejects a bad signature with 400 and records nothing', async () => {
     const { service } = makeService();
-    expect(() => service.receive('peach', { headers: {}, rawBody: '{}' })).toThrow(/invalid/);
-    expect(service.list()).toHaveLength(0);
+    await expect(service.receive('peach', { headers: {}, rawBody: '{}' })).rejects.toThrow(
+      /invalid/,
+    );
+    expect(await service.list()).toHaveLength(0);
   });
 
   it('deduplicates a retried delivery', async () => {
@@ -90,9 +92,9 @@ describe('WebhooksService', () => {
         status: 'succeeded',
       }),
     };
-    expect(service.receive('peach', input).duplicate).toBe(false);
-    expect(service.receive('peach', input).duplicate).toBe(true);
-    expect(service.list()).toHaveLength(1);
+    expect((await service.receive('peach', input)).duplicate).toBe(false);
+    expect((await service.receive('peach', input)).duplicate).toBe(true);
+    expect(await service.list()).toHaveLength(1);
   });
 });
 

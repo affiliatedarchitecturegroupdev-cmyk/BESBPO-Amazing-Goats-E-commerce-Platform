@@ -8,11 +8,11 @@ export interface ProviderEventRecord {
   processedAt?: string;
 }
 
-/** Persistence boundary for provider events; the SQL adapter lands with the schema swap. */
+/** Persistence boundary for provider events; the SQL adapter is over `payments.provider_events`. */
 export interface WebhookStore {
   /** Records an event, returning whether it is new. A duplicate is not stored twice. */
-  record(event: ProviderEventRecord): { stored: boolean; event: ProviderEventRecord };
-  list(): ProviderEventRecord[];
+  record(event: ProviderEventRecord): Promise<{ stored: boolean; event: ProviderEventRecord }>;
+  list(): Promise<ProviderEventRecord[]>;
 }
 
 /**
@@ -27,7 +27,7 @@ export class InMemoryWebhookStore implements WebhookStore {
     return `${provider}:${eventId}`;
   }
 
-  record(event: ProviderEventRecord): { stored: boolean; event: ProviderEventRecord } {
+  async record(event: ProviderEventRecord): Promise<{ stored: boolean; event: ProviderEventRecord }> {
     const key = this.key(event.provider, event.eventId);
     const existing = this.byKey.get(key);
     if (existing) return { stored: false, event: existing };
@@ -35,7 +35,7 @@ export class InMemoryWebhookStore implements WebhookStore {
     return { stored: true, event };
   }
 
-  list(): ProviderEventRecord[] {
+  async list(): Promise<ProviderEventRecord[]> {
     return [...this.byKey.values()];
   }
 }

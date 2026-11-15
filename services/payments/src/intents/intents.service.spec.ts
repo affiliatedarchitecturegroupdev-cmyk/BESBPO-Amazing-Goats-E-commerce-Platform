@@ -122,7 +122,7 @@ describe('IntentsService', () => {
       method: 'card',
       amountIncVatCents: 1000,
     });
-    const result = service.handleWebhook('peach', {
+    const result = await service.handleWebhook('peach', {
       headers: { 'x-ok': '1' },
       rawBody: JSON.stringify({
         id: 'evt_1',
@@ -131,17 +131,17 @@ describe('IntentsService', () => {
       }),
     });
     expect(result.intent?.status).toBe('succeeded');
-    expect(service.get(intent.id).status).toBe('succeeded');
+    expect((await service.get(intent.id)).status).toBe('succeeded');
   });
 
-  it('propagates a bad signature so the caller can answer 400', () => {
+  it('propagates a bad signature so the caller can answer 400', async () => {
     const { service } = makeService();
-    expect(() =>
+    await expect(
       service.handleWebhook('peach', {
         headers: {},
         rawBody: JSON.stringify({ id: 'evt_1', providerRef: 'ch_1', status: 'succeeded' }),
       }),
-    ).toThrow(/bad signature/);
+    ).rejects.toThrow(/bad signature/);
   });
 
   it('ignores an out-of-order transition and keeps the intent terminal', async () => {
@@ -151,16 +151,16 @@ describe('IntentsService', () => {
       method: 'card',
       amountIncVatCents: 1000,
     });
-    service.handleWebhook('peach', {
+    await service.handleWebhook('peach', {
       headers: { 'x-ok': '1' },
       rawBody: JSON.stringify({ id: 'e1', providerRef: intent.providerRef, status: 'succeeded' }),
     });
-    const later = service.handleWebhook('peach', {
+    const later = await service.handleWebhook('peach', {
       headers: { 'x-ok': '1' },
       rawBody: JSON.stringify({ id: 'e2', providerRef: intent.providerRef, status: 'failed' }),
     });
     expect(later.intent?.status).toBe('succeeded');
-    expect(service.get(intent.id).status).toBe('succeeded');
+    expect((await service.get(intent.id)).status).toBe('succeeded');
   });
 });
 

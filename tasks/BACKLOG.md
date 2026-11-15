@@ -39,3 +39,4 @@ Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 
 | T-034 | Observability, logging and alerts | 1 | devops | gate:infra |
 | T-035 | End-to-end tests for core journeys | 1 | qa | none |
 | T-036 | Deployment on Northflank and Koyeb | 0 | devops | gate:infra |
+| T-037 | Persist the payments stores (SQL adapters) | 1 | backend | gate:db,gate:payments |

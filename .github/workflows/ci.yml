@@ -49,3 +49,20 @@ jobs:
       - run: bash scripts/test-rls.sh
         env:
           DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @ag/db build
+      # The @ag/db adapter integration tests need a live database (they skip when
+      # DATABASE_URL is unset, so the node job does not run them). They connect
+      # as the service's superuser and provision their own NOSUPERUSER role to
+      # assert that row-level security is enforced, not bypassed.
+      - run: pnpm --filter @ag/db test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      # The payments SQL adapters exercise the real payments schema applied
+      # above; their integration tests skip without DATABASE_URL.
+      - run: pnpm --filter @ag/payments test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
