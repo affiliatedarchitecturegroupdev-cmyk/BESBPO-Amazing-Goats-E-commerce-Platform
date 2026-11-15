@@ -1,9 +1,28 @@
 // Wireframe: docs/wireframes/index.html#tp-team
+import { DEMO_TEAM } from '../../lib/seed';
+
 export default function TeamPage() {
   return (
     <section>
-      <h1>Trade portal: team</h1>
-      <p>TODO(agent): build this screen from wireframe <code>tp-team</code>. Respect RBAC and the fulfilment tags.</p>
+      <p className="bar">Team and approvals</p>
+
+      <table className="tbl">
+        <thead>
+          <tr><th>Name</th><th>Role</th><th>Limits</th></tr>
+        </thead>
+        <tbody>
+          {DEMO_TEAM.map((member) => (
+            <tr key={member.name}>
+              <td>{member.name}</td>
+              <td>{member.role}</td>
+              <td>{member.detail || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <button className="btn" type="button">Invite a user</button>
+      <p className="p">Buyers order within their limit; accounts users see invoices only.</p>
     </section>
   );
 }

@@ -1,10 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PgDb, runWithSession } from '@ag/db';
 import { PgCreditLimitsStore } from './credit-limits/credit-limits.sql-store';
+import { PgCreditApplicationsStore } from './credit-applications/credit-applications.sql-store';
 import { PgInvoicesStore } from './invoices/invoices.sql-store';
 import { PgCollectionsStore } from './collections/collections.sql-store';
 import { buildStatement } from './statements/statement.rules';
 import type { CreditProposal } from './credit-limits/credit-approval.rules';
+import { submitApplication, approveApplication, addSecondApproval } from './credit-applications/credit-application.rules';
 
 /**
  * Integration test for the accounts SQL adapters against a real Postgres. It runs
@@ -31,6 +33,7 @@ const INVOICE_B = 'a0b30000-0000-0000-0000-0000000000b2';
 const LINE_A = 'a0a40000-0000-0000-0000-0000000000a1';
 const ACTION_A = 'a0a50000-0000-0000-0000-0000000000a1';
 const LIMIT_A = 'a0a60000-0000-0000-0000-0000000000a1';
+const APPLICATION_A = 'a0a90000-0000-0000-0000-0000000000a1';
 
 function asRole(url: string, role: string, password: string): string {
   const parsed = new URL(url);
@@ -53,6 +56,8 @@ async function cleanFixtures(): Promise<void> {
   await admin!.query(`DELETE FROM accounts.collection_actions WHERE id = '${ACTION_A}'`);
   await admin!.query(`DELETE FROM accounts.invoice_lines WHERE invoice_id IN ('${INVOICE_A}', '${INVOICE_B}')`);
   await admin!.query(`DELETE FROM accounts.invoices WHERE id IN ('${INVOICE_A}', '${INVOICE_B}')`);
+  await admin!.query(`DELETE FROM accounts.documents WHERE org_id IN ('${ORG_A}', '${ORG_B}')`);
+  await admin!.query(`DELETE FROM accounts.credit_applications WHERE id = '${APPLICATION_A}'`);
   await admin!.query(`DELETE FROM accounts.credit_limits WHERE org_id IN ('${ORG_A}', '${ORG_B}')`);
   await admin!.query(`DELETE FROM identity.users WHERE id IN ('${USER_A}', '${USER_B}')`);
   await admin!.query(`DELETE FROM identity.orgs WHERE id IN ('${ORG_A}', '${ORG_B}')`);
@@ -193,6 +198,55 @@ describe.skipIf(!admin)('accounts SQL adapters (integration)', () => {
       const all = await runWithSession({ staff: true }, () => store.all());
       expect(all.filter((p) => p.orgId === ORG_A)).toHaveLength(1);
       expect((await runWithSession({ orgId: ORG_A }, () => store.get(ORG_A)))?.limitCents).toBe(12_000_000);
+    });
+  });
+
+  describe('PgCreditApplicationsStore', () => {
+    const applicationInput = {
+      orgId: ORG_A,
+      businessType: 'butchery' as const,
+      registrationNumber: '2019/123456/07',
+      turnoverDeclaredCents: 2_000_000_000,
+      estWeeklySpendCents: 800_000,
+      requestedLimitCents: 5_000_000,
+      requestedTermsDays: 14,
+      documents: [
+        { kind: 'company_registration' as const, storageUrl: 'https://files/reg.pdf', verified: true },
+        { kind: 'vat_certificate' as const, storageUrl: 'https://files/vat.pdf', verified: true },
+        { kind: 'certificate_of_acceptability' as const, storageUrl: 'https://files/coa.pdf', verified: true },
+        { kind: 'bank_letter' as const, storageUrl: 'https://files/bank.pdf', verified: true },
+      ],
+      consentGiven: true,
+    };
+
+    it('inserts an application with its documents and reads it back scoped to the org', async () => {
+      const store = new PgCreditApplicationsStore(app!);
+      const application = submitApplication(APPLICATION_A, applicationInput, '2025-11-01T00:00:00.000Z');
+      await runWithSession({ staff: true }, () => store.insert(application));
+
+      const orgA = await runWithSession({ orgId: ORG_A }, () => store.get(APPLICATION_A));
+      expect(orgA?.registrationNumber).toBe('2019/123456/07');
+      expect(orgA?.documents).toHaveLength(4);
+      expect(orgA?.status).toBe('submitted');
+
+      const orgB = await runWithSession({ orgId: ORG_B }, () => store.get(APPLICATION_A));
+      expect(orgB).toBeUndefined();
+    });
+
+    it('records a first approval, then a second for a large limit', async () => {
+      const store = new PgCreditApplicationsStore(app!);
+      const submitted = await runWithSession({ staff: true }, () => store.get(APPLICATION_A));
+      const large = { ...submitted!, requestedLimitCents: 50_000_000 };
+      await runWithSession({ staff: true }, () => store.replace(large));
+      const first = approveApplication(large, USER_A, '2025-11-02T00:00:00.000Z');
+      await runWithSession({ staff: true }, () => store.replace(first));
+      const second = addSecondApproval(first, USER_B, '2025-11-03T00:00:00.000Z');
+      await runWithSession({ staff: true }, () => store.replace(second));
+
+      const stored = await runWithSession({ orgId: ORG_A }, () => store.get(APPLICATION_A));
+      expect(stored?.status).toBe('approved');
+      expect(stored?.decidedBy).toBe(USER_A);
+      expect(stored?.secondApprover).toBe(USER_B);
     });
   });
 
