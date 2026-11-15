@@ -8,7 +8,7 @@
   "scripts": {
     "bootstrap": "pnpm install --frozen-lockfile && pnpm --filter \"./packages/*\" build && pnpm -r lint && pnpm test",
     "build": "pnpm -r build",
-    "test": "pnpm -r test && vitest run --config vitest.bootstrap.config.mjs && vitest run --config vitest.deploy.config.mjs",
+    "test": "pnpm -r test && vitest run --config vitest.bootstrap.config.mjs && vitest run --config vitest.deploy.config.mjs && vitest run --config vitest.e2e.config.mjs",
     "lint": "pnpm -r lint",
     "format": "prettier --write ."
   },
