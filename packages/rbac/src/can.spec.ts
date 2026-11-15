@@ -22,6 +22,10 @@ describe('rbac', () => {
     expect(requiresSecondApprover('roles:manage')).toBe(true);
     expect(requiresSecondApprover('orders:read')).toBe(false);
   });
+  it('money approvals stay two-person', () => {
+    expect(requiresSecondApprover('refunds:approve')).toBe(true);
+    expect(requiresSecondApprover('payouts:approve')).toBe(true);
+  });
   it('canAny checks several roles', () => {
     expect(canAny(['driver', 'dispatch'], 'routes:manage')).toBe(true);
   });

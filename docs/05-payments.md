@@ -117,3 +117,41 @@ space-delimited `v1,<base64>` list passing, with the same replay window as the H
 `PaymentInitiationRequestCompleted`/`Cancelled`/`Expired` map onto
 `succeeded`/`cancelled`/`failed`. `refund` calls `refundTransactionInitiate`, idempotent by
 the intent's `nonce`.
+
+## Settlement reconciliation
+
+Each provider settlement (`payments.settlements`) is matched to the payments it covers
+(`payments.settlement_lines`) by one pure rule,
+`reconcileSettlement` (`services/payments/src/reconciliation/reconciliation.rules.ts`,
+tested). A settlement reconciles only when every line resolves to a known payment **and**
+the lines sum exactly to `net_cents`. A mismatch is recorded as a reason
+(`no_lines`, `lines_do_not_sum_to_net`, `unknown_payment`), never thrown: reconciliation is
+a nightly batch, and one bad settlement must not stop the rest. `ReconciliationService`
+runs one settlement (`POST /payments/reconciliation/:id/reconcile`) or the whole period
+(`POST /payments/reconciliation/run`), and `GET /payments/reconciliation/exceptions` lists
+what did not reconcile. `markMatched` records the outcome so a re-run is stable.
+
+## Refunds, payouts and chargebacks (money out, four-eyes)
+
+Money leaving the platform goes through one set of rules,
+`services/payments/src/money/money.rules.ts` (tested). A refund or payout **above** its
+limit must be approved by a person other than the requester; at or below the limit a single
+approver is enough. The limits are named constants —
+`REFUND_SECOND_APPROVER_LIMIT_CENTS` (R5,000) and `PAYOUT_SECOND_APPROVER_LIMIT_CENTS`
+(R25,000) — not literals, and `assertSecondApprover` throws rather than returning a flag, so
+a caller cannot forget to check it. This mirrors the pricing four-eyes rule
+(`publish` in `services/commerce/src/pricing/pricing.rules.ts`); the same guarantee holds
+whatever the transport, and `refunds:approve`/`payouts:approve` stay in `TWO_PERSON`
+(`packages/rbac`).
+
+- Refunds (`payments.refunds`): `request` records who asked, `approve` enforces four-eyes,
+  `markRefunded` pays out. `POST /payments/refunds`, `POST /payments/refunds/:id/approve`.
+- Payouts (`payments.payouts`): the same flow, plus `freeze` for a chargeback.
+- Chargebacks: `ChargebacksService.receive` records the event and **freezes the related
+  payout** so the money is held before it leaves. A payout that is already `paid` cannot be
+  clawed back, so freezing is a no-op on it.
+
+The stores are in-memory (`InMemoryRefundsStore`, `InMemoryPayoutsStore`,
+`InMemoryReconciliationStore`, `InMemoryChargebacksStore`) until the SQL adapters land with
+the store swap.
+
