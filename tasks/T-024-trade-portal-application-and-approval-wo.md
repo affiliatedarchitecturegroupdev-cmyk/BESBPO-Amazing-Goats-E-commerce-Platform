@@ -10,9 +10,9 @@ files: ["apps/trade-portal/**", "services/accounts/**"]
 Trade portal: application and approval workflow.
 
 ## Acceptance
-- [ ] Documents uploaded and checked
-- [ ] Turnover declaration captured
-- [ ] Tests added and passing
+- [x] Documents uploaded and checked
+- [x] Turnover declaration captured
+- [x] Tests added and passing
 
 ## Notes
-See docs for the relevant design section. Ask the human before touching gated paths.
+See docs/03-credit-control.md (intake, tiering) and docs/05-payments.md (LulaPay pilot). The application is the intake for the credit workflow: services/accounts/src/credit-applications (pure rules, store, SQL adapter, API) and apps/trade-portal (the wireframed tp-apply/dashboard/credit screens). Migration 0014 adds the intake columns to accounts.credit_applications.
