@@ -119,6 +119,32 @@ space-delimited `v1,<base64>` list passing, with the same replay window as the H
 `succeeded`/`cancelled`/`failed`. `refund` calls `refundTransactionInitiate`, idempotent by
 the intent's `nonce`.
 
+## TradeSafe escrow adapter
+
+`services/payments/src/providers/tradesafe.provider.ts` maps TradeSafe onto the interface.
+TradeSafe holds a buyer's funds until both parties accept the delivery, which is what a
+farm-gate purchase needs. Escrow carries a minimum fee, so it is offered only from R10,000
+(`ESCROW_MINIMUM_CENTS`); routing refuses a smaller amount, and the adapter refuses again in
+`createPayment` as a second line of defence. It is a hosted **redirect** provider, so
+`createPayment` returns the TradeSafe-hosted `redirectUrl`. It reads `TRADESAFE_CLIENT_ID`,
+`TRADESAFE_CLIENT_SECRET` and `TRADESAFE_WEBHOOK_SECRET`. Its webhooks use the same
+`t=<unix>,v1=<hex>` HMAC scheme as Peach (`verifyHmacSignature`), and
+`FUNDS_RECEIVED`/`FUNDS_RELEASED`/`CANCELLED`/`FAILED`/`EXPIRED` map onto
+`succeeded`/`cancelled`/`failed`.
+
+## LulaPay adapter (pilot)
+
+`services/payments/src/providers/lulapay.provider.ts` maps LulaPay onto the interface.
+LulaPay is a trade BNPL provider: the merchant is paid now and the trade buyer settles over
+longer terms, so it settles the `trade_bnpl` method. It is a Phase 2 pilot behind a feature
+flag: `providersFromEnv` registers it only when `LULAPAY_ENABLED=true`, and `createPayment`
+refuses while `enabled` is false, so a stray route cannot reach the pilot while it is off
+(`feature-flags.ts`, tested). It is a hosted **redirect** provider and reads `LULAPAY_API_KEY`,
+`LULAPAY_WEBHOOK_SECRET` and `LULAPAY_ENABLED`. Its webhooks sign the body directly, so
+`verifyWebhook` uses `verifyHmacBody` and deduplicates by event id (there is no timestamp
+envelope). `APPROVED`/`SETTLED`/`DECLINED`/`EXPIRED`/`CANCELLED` map onto
+`succeeded`/`failed`/`cancelled`.
+
 ## Settlement reconciliation
 
 Each provider settlement (`payments.settlements`) is matched to the payments it covers
