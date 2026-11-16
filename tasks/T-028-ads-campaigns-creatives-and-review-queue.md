@@ -10,9 +10,9 @@ files: ["services/ads/**", "apps/advertiser-portal/**"]
 Ads: campaigns, creatives and review queue.
 
 ## Acceptance
-- [ ] Claims evidence required
-- [ ] Human review before go-live
-- [ ] Tests added and passing
+- [x] Claims evidence required
+- [x] Human review before go-live
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.
