@@ -2,12 +2,14 @@ import { Controller, Get } from '@nestjs/common';
 import { RequirePermissions } from '@ag/nest-auth';
 import { RateLimitService } from './rate-limit.service';
 
-// TODO(agent): implement per tasks/ backlog. Keep every route behind RequirePermissions.
+/** Read-only view of the effective rate-limit rules, for operators. */
 @Controller('gateway/rate-limit')
 export class RateLimitController {
   constructor(private readonly service: RateLimitService) {}
 
   @Get()
   @RequirePermissions('audit:read')
-  list() { return this.service.list(); }
+  limits() {
+    return this.service.limits();
+  }
 }
