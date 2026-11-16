@@ -42,7 +42,7 @@ export function groupByFulfilment(lines: CartLine[]): CartGroup[] {
 }
 
 /** Free on route days within zone 1; otherwise the zone fee applies. */
-export function deliveryLine(zoneId: number | undefined, feeCents: number): { label: string; feeCents: number } {
-  const label = zoneId === 1 ? 'Delivery (zone 1, free on route days)' : `Delivery (zone ${zoneId ?? '—'})`;
+export function deliveryLine(zoneId: number | string | undefined, feeCents: number): { label: string; feeCents: number } {
+  const label = zoneId === 1 || zoneId === '1' ? 'Delivery (zone 1, free on route days)' : `Delivery (zone ${zoneId ?? '—'})`;
   return { label, feeCents };
 }

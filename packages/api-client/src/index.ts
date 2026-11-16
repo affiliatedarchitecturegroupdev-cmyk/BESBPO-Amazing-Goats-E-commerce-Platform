@@ -1,12 +1,225 @@
-import type { Variant } from '@ag/shared-types';
-export function createClient(baseUrl: string, getHeaders: () => Record<string, string> = () => ({})) {
+import type {
+  Address,
+  CreditTier,
+  FulfilmentType,
+  Money,
+  OrderStatus,
+  PaymentMethod,
+  Temperature,
+  Variant,
+} from '@ag/shared-types';
+
+/**
+ * The typed client the storefront, trade portal and staff portals share
+ * (docs/01-architecture.md: the gateway is the BFF). It carries no secret of its
+ * own: the caller passes a `getHeaders` that supplies the bearer token, and the
+ * base URL is a gateway address the caller reads from the environment on the
+ * server, never from a `NEXT_PUBLIC_` variable.
+ */
+
+/** Raised when the gateway answers with a non-2xx status. */
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly path: string,
+  ) {
+    super(`${status} ${path}`);
+    this.name = 'ApiError';
+  }
+}
+
+/** A catalogue row as the gateway returns it (commerce `CatalogueItem`). */
+export interface CatalogueItem {
+  id: string;
+  sku: string;
+  productId: string;
+  name: string;
+  pack: string;
+  unit: string;
+  fulfilment: FulfilmentType;
+  temperature: Temperature;
+  channel: Variant['channel'];
+  phase: Variant['phase'];
+  lineCode: string;
+  lineName: string;
+  categorySlug: string | null;
+  halaalAvailable: boolean;
+  active: boolean;
+  priceCents?: Money;
+}
+
+export interface CatalogueFilters {
+  line?: string;
+  category?: string;
+  fulfilment?: FulfilmentType;
+  channel?: Variant['channel'];
+  phase?: Variant['phase'];
+  temperature?: Temperature;
+}
+
+export interface SearchResult {
+  query: string;
+  didYouMean: string | null;
+  count: number;
+  items: CatalogueItem[];
+}
+
+export interface CycleInfo {
+  cutoffAt: string | null;
+  tradeLockAt: string | null;
+  orderOpen: boolean;
+}
+
+export interface HomeResponse {
+  view: 'public' | 'trade';
+  cycle: CycleInfo;
+  sections: { id: string; items: Variant[] }[];
+}
+
+/** One cart line, as the commerce order endpoint accepts it. */
+export interface CartLineInput {
+  sku: string;
+  qty: number;
+  unitPriceExVatCents: number;
+  fulfilment: FulfilmentType;
+  temperature: Temperature;
+}
+
+export interface CartInput {
+  lines: CartLineInput[];
+  deliveryFeeCents?: number;
+  zoneId?: string;
+  paymentMethod?: PaymentMethod | 'deposit';
+  deliveryAddress?: Address;
+}
+
+export interface Order {
+  id: string;
+  number?: number;
+  status: OrderStatus;
+  subtotalExVatCents: number;
+  vatCents: number;
+  totalIncVatCents: number;
+  lines?: CartLineInput[];
+}
+
+export interface CreditLimit {
+  orgId: string;
+  tier: CreditTier;
+  termsDays: number;
+  limitCents: Money;
+  status: 'proposed' | 'approved' | 'rejected';
+  reasons?: string[];
+  ncaReview?: boolean;
+}
+
+export interface StatementLine {
+  invoiceId: string;
+  number: string;
+  dueOn: string;
+  totalIncVatCents: Money;
+  daysOverdue: number;
+  bucket: 'current' | '1-30' | '31-60' | '61-90' | '90+';
+}
+
+export interface Statement {
+  orgId: string;
+  asOf: string;
+  balanceCents: Money;
+  lines: StatementLine[];
+}
+
+/** A served retail-media ad (services/ads `AdPlacement`). */
+export interface ServedAd {
+  creativeId: string;
+  campaignId: string;
+  slot: string;
+  sponsored: boolean;
+  label: string;
+  headline?: string;
+  assetUrl: string;
+  destinationUrl?: string;
+}
+
+export interface ApplicationDocument {
+  kind: string;
+  filename?: string;
+  state?: string;
+}
+
+export interface CreditApplicationInput {
+  orgId: string;
+  businessType: string;
+  registrationNumber: string;
+  turnoverDeclaredCents: Money;
+  estWeeklySpendCents: Money;
+  requestedLimitCents: Money;
+  requestedTermsDays: number;
+  documents: ApplicationDocument[];
+  consentGiven: boolean;
+}
+
+function query(params: Record<string, string | number | undefined>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== '') search.set(key, String(value));
+  }
+  const s = search.toString();
+  return s ? `?${s}` : '';
+}
+
+/** The transport the client uses; defaults to the global fetch. */
+export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
+
+export function createClient(
+  baseUrl: string,
+  getHeaders: () => Record<string, string> = () => ({}),
+  fetchImpl: FetchLike = fetch,
+) {
   async function req<T>(path: string, init?: RequestInit): Promise<T> {
-    const res = await fetch(baseUrl + path, { ...init, headers: { 'content-type': 'application/json', ...getHeaders(), ...(init?.headers ?? {}) } });
-    if (!res.ok) throw new Error(`${res.status} ${path}`);
+    const res = await fetchImpl(baseUrl + path, {
+      ...init,
+      headers: { 'content-type': 'application/json', ...getHeaders(), ...(init?.headers ?? {}) },
+    });
+    if (!res.ok) throw new ApiError(res.status, path);
+    if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
   }
+
   return {
-    listVariants: (category: string) => req<Variant[]>(`/commerce/catalog/variants?category=${encodeURIComponent(category)}`),
-    currentCycle: (productClass: string) => req<{ cutoffAt: string }>(`/commerce/cycles/current?productClass=${productClass}`),
+    // Catalogue and cycles.
+    home: () => req<HomeResponse>('/gateway/bff/home'),
+    catalogue: (filters: CatalogueFilters = {}) =>
+      req<CatalogueItem[]>(`/commerce/catalog${query({ ...filters })}`),
+    item: (sku: string) => req<CatalogueItem>(`/commerce/catalog/${encodeURIComponent(sku)}`),
+    search: (q: string, opts: { limit?: number } = {}) =>
+      req<SearchResult>(`/commerce/catalog/search${query({ q, limit: opts.limit })}`),
+    currentCycle: (productClass?: string) =>
+      req<CycleInfo>(`/commerce/cycles/current${query({ productClass })}`),
+
+    // Cart and checkout.
+    createOrder: (cart: CartInput) =>
+      req<Order>('/commerce/orders', { method: 'POST', body: JSON.stringify(cart) }),
+    order: (id: string) => req<Order>(`/commerce/orders/${encodeURIComponent(id)}`),
+
+    // Retail media.
+    serveAds: (slot: string, context: Record<string, string | number> = {}) =>
+      req<ServedAd[]>(`/ads/decisioning/serve${query({ slot, ...context })}`),
+
+    // Trade accounts.
+    creditLimits: () => req<CreditLimit[]>('/accounts/credit-limits'),
+    creditLimit: (orgId: string) =>
+      req<CreditLimit>(`/accounts/credit-limits/${encodeURIComponent(orgId)}`),
+    statement: (orgId: string) =>
+      req<Statement>(`/accounts/statements/${encodeURIComponent(orgId)}`),
+    submitCreditApplication: (body: CreditApplicationInput) =>
+      req<{ id: string; status: string }>('/accounts/credit-applications', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
   };
 }
+
+export type ApiClient = ReturnType<typeof createClient>;
+
+export * from './view-models';

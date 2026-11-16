@@ -1,6 +1,7 @@
 // Wireframe: docs/wireframes/index.html#tp-team
-import { DEMO_TEAM } from '../../lib/seed';
+import { DEMO_TEAM } from '../../lib/fixtures';
 
+// Team and approvals have no endpoint yet; this reads the fixture until they do.
 export default function TeamPage() {
   return (
     <section>

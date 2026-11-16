@@ -4,16 +4,20 @@ import { ProductCard } from '../../components/ProductCard';
 import { SponsoredSlot } from '../../components/FulfilmentTag';
 import { cartTotals } from '../../lib/cart';
 import { groupByFulfilment, deliveryLine } from '../../lib/cart-groups';
-import { seedCart } from '../../lib/cart-seed';
-import { getBySlug } from '../../lib/catalog';
+import { cartSession } from '../../lib/cart-session';
 import { formatRand } from '../../lib/format';
+import { loadCatalogue } from '../../lib/gateway';
 
-export default function CartPage() {
-  const cart = seedCart();
+// The cart cookie and cross-sell catalogue are read per request.
+export const dynamic = 'force-dynamic';
+
+export default async function CartPage() {
+  const cart = cartSession();
   const groups = groupByFulfilment(cart.lines);
   const totals = cartTotals(cart);
   const delivery = deliveryLine(cart.zoneId, totals.deliveryFeeCents);
-  const crossSell = getBySlug('v-spinach-bunch');
+  const { data: items } = await loadCatalogue({ category: 'produce' });
+  const crossSell = items[0];
 
   return (
     <section>

@@ -14,7 +14,8 @@ export interface CartLine {
 export interface Cart {
   lines: CartLine[];
   deliveryFeeCents?: number;
-  zoneId?: number;
+  /** Delivery zone id; the gateway may carry it as a string or a number. */
+  zoneId?: number | string;
   paymentMethod?: string;
 }
 
