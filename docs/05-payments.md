@@ -14,6 +14,26 @@ One payment service hides providers. Routing and fee model: `services/payments/s
 
 Published fees (excluding VAT, November 2026, to be confirmed in writing): PayFast card 3.2% + R2, Instant EFT 2% (min R2); Peach about 2.95% + R1.50 cards, 1.5% + R1.50 pay by bank; Stitch 2.95% cards. On a R3,105 box: card R92 to R101, pay by bank about R47 to R62. Needs: idempotency keys, signed webhooks, daily settlement reconciliation, refunds with second approver above a limit, chargeback handling, partner payouts with second approver, accounting sync.
 
+## Provider fees and settlement terms (T-031)
+
+Every fee is one entry in `PROVIDER_FEES` (`services/payments/src/routing/provider-fees.ts`,
+tested), keyed `provider/method`, with `percent`, an optional `fixedCents` and an optional
+`minCents` floor. `estimateFeeCents` applies a model in one place, so a rate change is a
+one-line edit and there is nothing to keep in step. Settlement terms live the same way in
+`SETTLEMENT_TERMS` (`settlement-terms.ts`, tested), and `expectedSettlementDate` turns them
+into the date a payment should reach the bank.
+
+Each entry carries `quoted: false` and a `source` while it is still a published figure.
+`unquotedFeeModels()` and `unconfirmedSettlementTerms()` list what a human still has to
+confirm in writing. The written quotes are recorded in
+`services/payments/src/routing/provider-quotes.json` (checked in unconfirmed); once a quote
+is signed, its entry is filled in and the matching `PROVIDER_FEES` entry flips to
+`quoted: true`. `quoteDrift()` compares a confirmed quote against the published figure, so a
+signed quote that disagrees is caught in review rather than in production.
+
+T-031 is `gate:payments` and `agent: human`: the code above is ready, but the written
+quotes and the `human-approved` label are the human's to provide before it merges.
+
 ## Provider interface
 
 Every adapter implements one interface (`services/payments/src/providers/provider.interface.ts`),

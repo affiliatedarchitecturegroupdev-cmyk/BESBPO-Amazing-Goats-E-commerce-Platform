@@ -1,0 +1,33 @@
+{
+  "$comment": "T-031: written provider quotes. A human fills one entry per provider from the provider's signed rate card, then flips `quoted` to true in services/payments/src/routing/provider-fees.ts. Until then every entry is a published figure, not a written quote.",
+  "providerFees": [
+    {
+      "provider": "payfast",
+      "method": "card",
+      "percent": 3.2,
+      "fixedCents": 200,
+      "quoteReference": "",
+      "receivedOn": "",
+      "confirmed": false
+    },
+    {
+      "provider": "peach",
+      "method": "card",
+      "percent": 2.95,
+      "fixedCents": 150,
+      "quoteReference": "",
+      "receivedOn": "",
+      "confirmed": false
+    }
+  ],
+  "settlement": [
+    {
+      "provider": "peach",
+      "settlementDays": 2,
+      "cadence": "daily",
+      "quoteReference": "",
+      "receivedOn": "",
+      "confirmed": false
+    }
+  ]
+}
