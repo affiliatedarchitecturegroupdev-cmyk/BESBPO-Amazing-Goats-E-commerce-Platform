@@ -11,6 +11,7 @@ import {
   authOptionsFromEnv,
   PermissionsGuard,
   PERMS_KEY,
+  AUTHENTICATED_KEY,
 } from './index';
 
 const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -157,9 +158,10 @@ describe('PermissionsGuard', () => {
     switchToHttp: () => ({ getRequest: () => req }),
   });
   // The guard reads metadata via the reflector, so stub it per test.
-  const guardFor = (required: string[] | undefined, opts = {}) => {
+  const guardFor = (required: string[] | undefined, opts = {}, authenticated = false) => {
     const g = new PermissionsGuard(reflector, opts as any);
-    (reflector as any).getAllAndOverride = () => required;
+    (reflector as any).getAllAndOverride = (key: string) =>
+      key === PERMS_KEY ? required : key === AUTHENTICATED_KEY ? authenticated : undefined;
     return g;
   };
 
@@ -195,5 +197,22 @@ describe('PermissionsGuard', () => {
 
   it('constructs without any injected options (the app-module wiring case)', () => {
     expect(() => new PermissionsGuard(reflector)).not.toThrow();
+  });
+
+  it('requires a signed-in caller for a @RequireAuthenticated route, with no permission check', () => {
+    const authed = (roles: string[]) => {
+      const g = new PermissionsGuard(reflector, { secret: 'test-secret', now } as any);
+      (reflector as any).getAllAndOverride = (key: string) =>
+        key === PERMS_KEY ? undefined : key === AUTHENTICATED_KEY ? true : undefined;
+      const token = signHs256({ ...baseClaims, roles });
+      return g.canActivate(ctxFor(undefined, { headers: { authorization: `Bearer ${token}` } }));
+    };
+    // Any signed-in role passes, even one with no permissions.
+    expect(authed(['driver'])).toBe(true);
+    expect(authed([])).toBe(true);
+    // Anonymous is still refused.
+    const g = new PermissionsGuard(reflector, { secret: 'test-secret', now } as any);
+    (reflector as any).getAllAndOverride = (key: string) => (key === PERMS_KEY ? undefined : true);
+    expect(() => g.canActivate(ctxFor(undefined, { headers: {} }))).toThrow(UnauthorizedException);
   });
 });

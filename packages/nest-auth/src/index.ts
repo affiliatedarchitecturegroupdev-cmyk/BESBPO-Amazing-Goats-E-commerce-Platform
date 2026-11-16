@@ -24,6 +24,15 @@ export * from './audit-store';
 export const PERMS_KEY = 'permissions';
 export const RequirePermissions = (...p: Permission[]) => SetMetadata(PERMS_KEY, p);
 
+/**
+ * Marks a route as requiring a signed-in caller but no particular permission.
+ * For self-service endpoints (a session view, a profile) that every
+ * authenticated role may reach. `@RequirePermissions()` stays the norm for
+ * everything else.
+ */
+export const AUTHENTICATED_KEY = 'authenticated';
+export const RequireAuthenticated = () => SetMetadata(AUTHENTICATED_KEY, true);
+
 /** Injection token for the guard's auth options, so services can configure it. */
 export const AUTH_OPTIONS = 'AG_AUTH_OPTIONS';
 
@@ -146,10 +155,16 @@ export class PermissionsGuard implements CanActivate {
       ctx.getHandler(),
       ctx.getClass(),
     ]);
-    if (!required || required.length === 0) return true;
+    const authenticatedOnly = this.reflector.getAllAndOverride<boolean>(AUTHENTICATED_KEY, [
+      ctx.getHandler(),
+      ctx.getClass(),
+    ]);
+    if ((!required || required.length === 0) && !authenticatedOnly) return true;
     const user = userFromRequest(ctx.switchToHttp().getRequest(), this.options);
     if (!user) throw new UnauthorizedException();
-    if (!required.every((p) => canAny(user.roles, p))) throw new ForbiddenException('missing permission');
+    if (required && required.length > 0 && !required.every((p) => canAny(user.roles, p))) {
+      throw new ForbiddenException('missing permission');
+    }
     return true;
   }
 }
