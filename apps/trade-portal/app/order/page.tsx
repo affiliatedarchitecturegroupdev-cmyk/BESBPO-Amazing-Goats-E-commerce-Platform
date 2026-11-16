@@ -1,16 +1,17 @@
 // Wireframe: docs/wireframes/index.html#tp-order
 import { formatRand } from '../../lib/format';
+import { loadCatalogue } from '../../lib/gateway';
 
-const CATALOGUE = [
-  { code: 'AG-LB-001', name: 'Lamb carcass', qty: 2, priceCents: 0 },
-  { code: 'AG-EG-003', name: 'Eggs XL tray', qty: 20, priceCents: 0 },
-];
+export const dynamic = 'force-dynamic';
 
-export default function OrderPage() {
-  const totalExVatCents = CATALOGUE.reduce((sum, line) => sum + line.qty * line.priceCents, 0);
+export default async function OrderPage() {
+  const { data: items, error } = await loadCatalogue();
+  const totalExVatCents = items.reduce((sum, line) => sum + (line.priceCents ?? 0), 0);
+
   return (
     <section>
       <p className="bar">Trade order <span className="tag">Cut-off Sun</span></p>
+      {error && <p className="p" role="alert">{error}</p>}
 
       <ul className="chips">
         <li className="on">By code</li>
@@ -20,10 +21,10 @@ export default function OrderPage() {
         <li>Dairy</li>
       </ul>
 
-      {CATALOGUE.map((line) => (
-        <div key={line.code} className="row">
-          <span>{line.code} {line.name}</span>
-          <span>{line.qty}</span>
+      {items.map((line) => (
+        <div key={line.sku} className="row">
+          <span>{line.sku} {line.name}</span>
+          <span>{line.priceCents != null ? formatRand(line.priceCents) : 'R ---'}</span>
         </div>
       ))}
 

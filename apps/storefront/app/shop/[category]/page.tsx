@@ -3,28 +3,32 @@ import Link from 'next/link';
 import { CutoffBanner } from '../../../components/CutoffBanner';
 import { ProductCard } from '../../../components/ProductCard';
 import { ServedAdSlot } from '../../../components/FulfilmentTag';
-import { byCategory, CATEGORIES } from '../../../lib/catalog';
-import { servedAdsForSlot } from '../../../lib/ads-seed';
+import { CATEGORIES, type StorefrontItem } from '../../../lib/catalog';
 import { adsForSlot, placeAds } from '../../../lib/placements';
 import { cutoffMessage } from '../../../lib/fulfilment';
+import { loadAds, loadCatalogue } from '../../../lib/gateway';
+
+// The catalogue is live, so the page renders per request.
+export const dynamic = 'force-dynamic';
 
 const FILTERS = ['All cuts', 'Boxes', 'Braai', 'Potjie', 'Halaal', 'Pack size'];
 
-export function generateStaticParams() {
-  return CATEGORIES.map((c) => ({ category: c.slug }));
-}
-
-export default function ShopCategoryPage({ params }: { params: { category: string } }) {
+export default async function ShopCategoryPage({ params }: { params: { category: string } }) {
   const category = CATEGORIES.find((c) => c.slug === params.category);
   const label = category?.label ?? params.category;
-  const items = byCategory(params.category);
+  const [{ data: items, error }, adsA3, adsA4] = await Promise.all([
+    loadCatalogue({ category: params.category }),
+    loadAds('A3'),
+    loadAds('A4'),
+  ]);
   // A3 category sponsor sits above the grid; A4 sponsored tiles sit at positions 3, 7, 11.
-  const sponsors = adsForSlot(servedAdsForSlot('A3'), 'A3');
-  const placed = placeAds(items, servedAdsForSlot('A4'));
+  const sponsors = adsForSlot(adsA3, 'A3');
+  const placed = placeAds(items, adsA4);
 
   return (
     <section>
       <h1>{label}</h1>
+      {error && <p className="p" role="alert">{error}</p>}
       {sponsors.map((ad) => <ServedAdSlot key={ad.creativeId} ad={ad} />)}
 
       <ul className="chips">
@@ -36,7 +40,7 @@ export default function ShopCategoryPage({ params }: { params: { category: strin
 
       <div className="grid">
         {placed.map((p, i) => (
-          <div key={`${('id' in p.item ? p.item.id : i)}-${i}`}>
+          <div key={`${(p.item as StorefrontItem).id}-${i}`}>
             {p.ad ? <ServedAdSlot ad={p.ad} /> : <ProductCard v={p.item} />}
           </div>
         ))}

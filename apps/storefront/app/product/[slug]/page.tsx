@@ -5,19 +5,20 @@ import { CutoffBanner } from '../../../components/CutoffBanner';
 import { FulfilmentTag, Badges, SponsoredSlot } from '../../../components/FulfilmentTag';
 import { ProductCard } from '../../../components/ProductCard';
 import { formatRand } from '../../../lib/format';
-import { badgesFor, getBySlug, ITEMS } from '../../../lib/catalog';
+import { badgesFor } from '../../../lib/catalog';
 import { cutoffMessage } from '../../../lib/fulfilment';
+import { loadCatalogue } from '../../../lib/gateway';
+
+// The catalogue is live, so the page renders per request.
+export const dynamic = 'force-dynamic';
 
 const SLOTS = ['Wed 15 Nov', 'Thu 16 Nov', 'Next week'];
 
-export function generateStaticParams() {
-  return ITEMS.map((i) => ({ slug: i.id }));
-}
-
-export default function ProductSlugPage({ params }: { params: { slug: string } }) {
-  const v = getBySlug(params.slug);
+export default async function ProductSlugPage({ params }: { params: { slug: string } }) {
+  const { data: items } = await loadCatalogue();
+  const v = items.find((i) => i.id === params.slug || i.sku === params.slug);
   if (!v) notFound();
-  const related = ITEMS.filter((i) => i.category === v.category && i.id !== v.id).slice(0, 3);
+  const related = items.filter((i) => i.category === v.category && i.id !== v.id).slice(0, 3);
 
   return (
     <section>

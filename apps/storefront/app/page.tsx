@@ -3,10 +3,13 @@ import Link from 'next/link';
 import { CutoffBanner } from '../components/CutoffBanner';
 import { ProductCard } from '../components/ProductCard';
 import { ServedAdSlot } from '../components/FulfilmentTag';
-import { CATEGORIES, featuredBoxes, ITEMS } from '../lib/catalog';
-import { servedAdsForSlot } from '../lib/ads-seed';
+import { CATEGORIES, featuredBoxes, specials, type StorefrontItem } from '../lib/catalog';
 import { adsForSlot, placeAds } from '../lib/placements';
 import { cutoffMessage, earlyWindowMessage } from '../lib/fulfilment';
+import { loadAds, loadCatalogue, loadCycle } from '../lib/gateway';
+
+// A live catalogue: render per request rather than at build time.
+export const dynamic = 'force-dynamic';
 
 const OCCASIONS = [
   { slug: 'braai-day', label: 'Braai day' },
@@ -15,17 +18,26 @@ const OCCASIONS = [
   { slug: 'heritage-day', label: 'Heritage Day' },
 ];
 
-export default function HomePage() {
-  const specials = ITEMS.filter((i) => i.special);
-  const essentials = ITEMS.filter((i) => i.category === 'eggs' || i.category === 'dairy');
-  const banners = adsForSlot(servedAdsForSlot('A1').concat(servedAdsForSlot('A2')), 'A1');
-  const midBand = adsForSlot(servedAdsForSlot('A2'), 'A2');
+export default async function HomePage() {
+  const [{ data: items, error }, adsA1, adsA2, adsA4, cycle] = await Promise.all([
+    loadCatalogue(),
+    loadAds('A1'),
+    loadAds('A2'),
+    loadAds('A4'),
+    loadCycle(),
+  ]);
+
+  const banners = adsForSlot(adsA1.concat(adsA2), 'A1');
+  const midBand = adsForSlot(adsA2, 'A2');
   // A4 sponsored tiles sit among the specials, one in five, at most two.
-  const specialsWithAds = placeAds(specials, servedAdsForSlot('A4'));
+  const specialsWithAds = placeAds(specials(items), adsA4);
+  const essentials = items.filter((i) => i.category === 'eggs' || i.category === 'dairy');
 
   return (
     <section>
-      <CutoffBanner message={cutoffMessage('cycle')} />
+      <CutoffBanner message={cycle.orderOpen ? cutoffMessage('cycle') : 'Ordering is closed for this cycle'} />
+
+      {error && <p className="p" role="alert">{error}</p>}
 
       {banners.map((ad) => <ServedAdSlot key={ad.creativeId} ad={ad} />)}
 
@@ -38,7 +50,7 @@ export default function HomePage() {
 
       <h2>Ready-made bundles</h2>
       <div className="grid">
-        {featuredBoxes().map((v) => <ProductCard key={v.id} v={v} />)}
+        {featuredBoxes(items).map((v) => <ProductCard key={v.id} v={v} />)}
       </div>
 
       <h2>Shop by occasion</h2>
@@ -53,7 +65,7 @@ export default function HomePage() {
       <h2>Weekly specials</h2>
       <div className="grid">
         {specialsWithAds.map((p, i) => (
-          <div key={`${('id' in p.item ? p.item.id : i)}-${i}`}>
+          <div key={`${(p.item as StorefrontItem).id}-${i}`}>
             {p.ad ? <ServedAdSlot ad={p.ad} /> : <ProductCard v={p.item} />}
           </div>
         ))}
@@ -68,7 +80,7 @@ export default function HomePage() {
 
       <h2>Sponsored brands</h2>
       <div className="grid">
-        {adsForSlot(servedAdsForSlot('A4'), 'A4').map((ad) => <ServedAdSlot key={ad.creativeId} ad={ad} />)}
+        {adsForSlot(adsA4, 'A4').map((ad) => <ServedAdSlot key={ad.creativeId} ad={ad} />)}
       </div>
 
       <h2>Dairy and produce</h2>

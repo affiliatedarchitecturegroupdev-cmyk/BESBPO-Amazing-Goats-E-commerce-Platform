@@ -10,10 +10,13 @@ import {
   turnoverBand,
   validate,
 } from '../../lib/application';
-import { DEMO_APPLICATION } from '../../lib/seed';
+import { DEMO_APPLICATION } from '../../lib/fixtures';
 import { formatRand } from '../../lib/format';
+import { submitApplication } from './actions';
 
-export default function ApplyPage() {
+export const dynamic = 'force-dynamic';
+
+export default function ApplyPage({ searchParams }: { searchParams: { submitted?: string; error?: string } }) {
   const form = DEMO_APPLICATION;
   const progress = applicationProgress(form);
   const { problems } = validate(form);
@@ -24,6 +27,9 @@ export default function ApplyPage() {
     <section>
       <p className="bar">Trade account <span>Step {progress.step} of {progress.of}</span></p>
       <meter value={pct} min={0} max={100}>{pct}%</meter>
+
+      {searchParams.submitted && <p className="p" role="status">Application submitted. We will review it shortly.</p>}
+      {searchParams.error && <p className="p" role="alert">{searchParams.error}</p>}
 
       <h2>Business</h2>
       <ul className="chips">
@@ -70,7 +76,9 @@ export default function ApplyPage() {
         </ul>
       )}
 
-      <button className="btn" type="button" disabled={!progress.complete}>Submit application</button>
+      <form action={submitApplication}>
+        <button className="btn" type="submit" disabled={!progress.complete}>Submit application</button>
+      </form>
     </section>
   );
 }

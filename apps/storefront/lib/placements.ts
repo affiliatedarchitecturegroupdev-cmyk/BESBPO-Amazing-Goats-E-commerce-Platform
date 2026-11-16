@@ -7,18 +7,9 @@
  */
 
 import { MAX_ADS_PER_VIEW, maxSponsoredTiles } from './merchandising';
+import type { ServedAd } from '@ag/api-client';
 
-/** The shape the decisioning endpoint returns (services/ads AdPlacement). */
-export interface ServedAd {
-  creativeId: string;
-  campaignId: string;
-  slot: string;
-  sponsored: boolean;
-  label: string;
-  headline?: string;
-  assetUrl: string;
-  destinationUrl?: string;
-}
+export type { ServedAd } from '@ag/api-client';
 
 export interface AdView extends ServedAd {
   /** The label to render; always the service's label, defaulted to Sponsored. */

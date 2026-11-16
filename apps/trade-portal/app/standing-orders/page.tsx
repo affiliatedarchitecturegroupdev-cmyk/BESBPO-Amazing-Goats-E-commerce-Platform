@@ -1,6 +1,7 @@
 // Wireframe: docs/wireframes/index.html#tp-standing
-import { DEMO_STANDING_ORDERS } from '../../lib/seed';
+import { DEMO_STANDING_ORDERS } from '../../lib/fixtures';
 
+// Standing orders have no endpoint yet; this reads the fixture until they do.
 export default function StandingOrdersPage() {
   return (
     <section>
