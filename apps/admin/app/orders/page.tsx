@@ -1,14 +1,19 @@
 // Wireframe: docs/wireframes/index.html#ad-orders
-import { DEMO_ORDERS, orderStatusLabel } from '../../lib/seed';
-import { queueCounts } from '../../lib/admin-view';
+import { queueCounts, toOrderRow } from '../../lib/admin-view';
+import { loadOrders } from '../../lib/gateway';
 
-export default function OrdersPage() {
-  const counts = queueCounts(DEMO_ORDERS.map((o) => o.status));
+export const dynamic = 'force-dynamic';
+
+export default async function OrdersPage() {
+  const { data: orders, error } = await loadOrders();
+  const rows = orders.map(toOrderRow);
+  const counts = queueCounts(rows.map((o) => o.status));
 
   return (
     <section>
       <h1>Orders</h1>
       <p className="p">Queues, pick lists, route assignment.</p>
+      {error && <p className="p" role="alert">{error}</p>}
 
       <div className="chips">
         <span className="chip">New {counts.new}</span>
@@ -17,12 +22,14 @@ export default function OrdersPage() {
         <span className="chip">Delivered {counts.delivered}</span>
       </div>
 
+      {rows.length === 0 && !error && <p className="p">No orders yet.</p>}
+
       <table className="tbl">
         <thead>
           <tr><th>Order</th><th>Customer</th><th>Slot</th><th>Status</th></tr>
         </thead>
         <tbody>
-          {DEMO_ORDERS.map((order) => (
+          {rows.map((order) => (
             <tr key={order.id}>
               <td>{order.id}</td>
               <td>{order.customer}</td>

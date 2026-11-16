@@ -1,14 +1,17 @@
 // Wireframe: docs/wireframes/index.html#dr-stop
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { DEMO_DAY_PACK } from '../../../lib/daypack-seed';
 import { nextStop, stopById } from '../../../lib/daypack';
+import { loadDayPack } from '../../../lib/gateway';
 import { formatRand } from '../../../lib/format';
 
-export default function StopIdPage({ params }: { params: { id: string } }) {
-  const stop = stopById(DEMO_DAY_PACK, params.id);
+export const dynamic = 'force-dynamic';
+
+export default async function StopIdPage({ params }: { params: { id: string } }) {
+  const pack = await loadDayPack();
+  const stop = stopById(pack, params.id);
   if (!stop) notFound();
-  const next = nextStop(DEMO_DAY_PACK, stop.id);
+  const next = nextStop(pack, stop.id);
 
   return (
     <section>

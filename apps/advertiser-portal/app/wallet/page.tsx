@@ -1,21 +1,21 @@
 // Wireframe: docs/wireframes/index.html#av-wallet
-import { DEMO_WALLET } from '../../lib/seed';
+import { formatRand } from '../../lib/format';
+import { loadWallet } from '../../lib/gateway';
 
-function rand(cents: number): string {
-  if (!cents) return 'R ---';
-  return `R${(cents / 100).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
+export const dynamic = 'force-dynamic';
 
-export default function WalletPage() {
-  const balance = DEMO_WALLET.reduce((sum, e) => sum + e.amountCents, 0);
+export default async function WalletPage() {
+  const { data: wallet, error } = await loadWallet();
+
   return (
     <section>
       <h1>Wallet</h1>
       <p className="p">Prepaid wallet through the payment aggregators.</p>
+      {error && <p className="p" role="alert">{error}</p>}
 
       <article className="card row">
         <strong>Balance</strong>
-        <span>{rand(balance)}</span>
+        <span>{formatRand(wallet?.balanceCents ?? 0)}</span>
       </article>
 
       <div className="row">
@@ -27,11 +27,11 @@ export default function WalletPage() {
           <tr><th>Date</th><th>Item</th><th>Amount</th></tr>
         </thead>
         <tbody>
-          {DEMO_WALLET.map((e) => (
-            <tr key={`${e.date}-${e.item}`}>
-              <td>{e.date}</td>
-              <td>{e.item}</td>
-              <td>{rand(e.amountCents)}</td>
+          {(wallet?.ledger ?? []).map((e) => (
+            <tr key={e.id}>
+              <td>{e.at.slice(0, 10)}</td>
+              <td>{e.kind}</td>
+              <td>{formatRand(e.amountCents)}</td>
             </tr>
           ))}
         </tbody>

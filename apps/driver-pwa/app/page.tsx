@@ -1,11 +1,14 @@
 // Wireframe: docs/wireframes/index.html#dr-daypack
 import Link from 'next/link';
-import { DEMO_DAY_PACK } from '../lib/daypack-seed';
 import { routeOrder } from '../lib/daypack';
+import { loadDayPack } from '../lib/gateway';
 import { formatTime } from '../lib/format';
 
-export default function HomePage() {
-  const pack = DEMO_DAY_PACK;
+// The day pack is downloaded from the gateway on the server.
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const pack = await loadDayPack();
   const stops = routeOrder(pack);
   const first = stops[0];
 

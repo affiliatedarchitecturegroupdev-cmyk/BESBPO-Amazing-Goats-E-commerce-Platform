@@ -2,7 +2,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { type QueuedEvent } from '../../lib/offline-queue';
-import { queue, loadDemoQueue } from '../../lib/queue-seed';
+import { queue, loadDemoQueue } from '../../lib/fixtures';
 import { syncQueue } from '../../lib/sync';
 import { formatTime } from '../../lib/format';
 
@@ -22,7 +22,16 @@ export default function SyncPage() {
 
   async function syncNow() {
     try {
-      const count = await syncQueue(queue, async () => {}, DEVICE_ID);
+      // Post to the same-origin route, which forwards to the gateway with the
+      // server-held bearer token; the queue is trimmed only when it resolves.
+      const count = await syncQueue(queue, async (events) => {
+        const res = await fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ events }),
+        });
+        if (!res.ok) throw new Error('sync failed');
+      }, DEVICE_ID);
       setLastSync(new Date().toISOString());
       setStatus(count > 0 ? 'Synced' : 'Nothing to sync');
     } catch {

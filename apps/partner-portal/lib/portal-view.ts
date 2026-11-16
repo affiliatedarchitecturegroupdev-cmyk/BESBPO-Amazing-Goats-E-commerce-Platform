@@ -1,25 +1,12 @@
-export interface PartnerSlot {
-  id: string;
-  date: string;
-  capacity: number;
-  booked: number;
-  confirmed: boolean;
-  halaal: boolean;
-}
+import type { PartnerDocument, PurchaseOrder, SlaughterSlot } from '@ag/api-client';
 
-export interface PartnerOrder {
-  id: string;
-  code: string;
-  description: string;
-  date: string;
-  status: 'draft' | 'sent' | 'confirmed';
-}
-
-export interface PartnerDoc {
-  id: string;
-  name: string;
-  expiresOn: string;
-}
+/**
+ * The partner portal view model: thin aliases over the gateway types plus the
+ * pure rules the pages render. The live rows come from `lib/gateway.ts`.
+ */
+export type PartnerSlot = SlaughterSlot;
+export type PartnerOrder = PurchaseOrder;
+export type PartnerDoc = PartnerDocument;
 
 export type DocumentState = 'valid' | 'expiring' | 'expired';
 
@@ -55,18 +42,3 @@ export function orderStatusLabel(status: PartnerOrder['status']): string {
   if (status === 'sent') return 'Sent';
   return 'Draft';
 }
-
-/** Demo rows for local runs, until the partners gateway is wired. */
-export const DEMO_SLOTS: PartnerSlot[] = [
-  { id: 'slot-mon', date: 'Mon', capacity: 120, booked: 98, confirmed: false, halaal: true },
-  { id: 'slot-tue', date: 'Tue', capacity: 120, booked: 40, confirmed: false, halaal: true },
-];
-
-export const DEMO_ORDERS: PartnerOrder[] = [
-  { id: 'po-118', code: 'PO-118', description: '200 broilers', date: 'Wed', status: 'sent' },
-];
-
-export const DEMO_DOCS: PartnerDoc[] = [
-  { id: 'doc-pack', name: 'Pack station certificate', expiresOn: '2027-03-30' },
-  { id: 'doc-halaal', name: 'Halaal certificate', expiresOn: '2027-01-12' },
-];

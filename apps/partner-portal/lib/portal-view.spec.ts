@@ -6,6 +6,7 @@ import {
   orderStatusLabel,
   slotsAvailable,
 } from './portal-view';
+import { FIXTURE_DOCS, FIXTURE_ORDERS, FIXTURE_SLOTS } from './fixtures';
 
 describe('slotsAvailable', () => {
   it('subtracts booked from capacity', () => {
@@ -51,5 +52,13 @@ describe('labels', () => {
     expect(orderStatusLabel('confirmed')).toBe('Confirmed');
     expect(orderStatusLabel('sent')).toBe('Sent');
     expect(orderStatusLabel('draft')).toBe('Draft');
+  });
+});
+
+describe('fixtures match the view model', () => {
+  it('renders the demo slots and orders through the same rules', () => {
+    expect(slotsAvailable(FIXTURE_SLOTS[0])).toBe(22);
+    expect(orderStatusLabel(FIXTURE_ORDERS[0].status)).toBe('Sent');
+    expect(documentState(FIXTURE_DOCS[0].expiresOn, new Date('2026-01-01T00:00:00Z'))).toBe('valid');
   });
 });
