@@ -1,7 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { batchTag, cycleCapacityPct, queueCounts, shouldEarlyClose, temperatureLabel } from './admin-view';
+import {
+  batchTag,
+  cycleCapacityPct,
+  deriveAlerts,
+  orderStatusLabel,
+  queueCounts,
+  shouldEarlyClose,
+  temperatureLabel,
+  toBatchRow,
+  toCycleRow,
+  toOrderRow,
+} from './admin-view';
 import { rolesFromCookie } from './roles';
-import { orderStatusLabel } from './seed';
+import { FIXTURE_BATCHES, FIXTURE_CYCLES, FIXTURE_ORDERS } from './fixtures';
 
 describe('queueCounts', () => {
   it('groups order statuses into the four queues', () => {
@@ -66,5 +77,41 @@ describe('orderStatusLabel', () => {
   it('maps internal statuses to plain queue labels', () => {
     expect(orderStatusLabel('in_cycle')).toBe('New');
     expect(orderStatusLabel('out_for_delivery')).toBe('Out');
+  });
+});
+
+describe('gateway mappers', () => {
+  it('maps an order onto a queue row', () => {
+    const row = toOrderRow(FIXTURE_ORDERS[0]);
+    expect(row.id).toBe('o-2041');
+    expect(row.statusLabel).toBe('New');
+  });
+
+  it('maps a cycle onto a labelled row with the fill counted', () => {
+    const row = toCycleRow(FIXTURE_CYCLES[0], 820, 1000);
+    expect(row.label).toBe('chilled meat');
+    expect(row.statusLabel).toBe('Open');
+    expect(cycleCapacityPct(row.filled, row.capacity)).toBe(82);
+  });
+
+  it('maps a batch onto a table row', () => {
+    const row = toBatchRow(FIXTURE_BATCHES[0]);
+    expect(row.batchCode).toBe('AG-20261106-0001');
+    expect(row.product).toBe('AG-LM-001');
+  });
+});
+
+describe('deriveAlerts', () => {
+  it('flags warm batches and in-progress orders', () => {
+    const batches = FIXTURE_BATCHES.map(toBatchRow);
+    const orders = FIXTURE_ORDERS.map(toOrderRow);
+    const alerts = deriveAlerts(batches, orders);
+    expect(alerts.some((a) => a.title.includes('temperature'))).toBe(true);
+    expect(alerts.some((a) => a.title.includes('held'))).toBe(true);
+    expect(alerts.some((a) => a.title.includes('in progress'))).toBe(true);
+  });
+
+  it('stays quiet when nothing needs attention', () => {
+    expect(deriveAlerts([], [])).toEqual([]);
   });
 });

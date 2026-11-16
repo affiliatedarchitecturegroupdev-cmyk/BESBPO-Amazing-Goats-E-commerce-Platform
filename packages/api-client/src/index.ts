@@ -8,6 +8,28 @@ import type {
   Temperature,
   Variant,
 } from '@ag/shared-types';
+import type {
+  AdReport,
+  AuditRecord,
+  Batch,
+  Campaign,
+  CampaignInput,
+  CollectionAction,
+  CycleRecord,
+  DeliveryRoute,
+  DriverEventInput,
+  DriverSyncResult,
+  Invoice,
+  KpiReport,
+  MerchSection,
+  PartnerDocument,
+  PriceList,
+  PurchaseOrder,
+  Recall,
+  Settlement,
+  SlaughterSlot,
+  WalletSummary,
+} from './staff-types';
 
 /**
  * The typed client the storefront, trade portal and staff portals share
@@ -96,10 +118,15 @@ export interface CartInput {
 export interface Order {
   id: string;
   number?: number;
+  cycleId?: string | null;
   status: OrderStatus;
   subtotalExVatCents: number;
+  deliveryFeeCents?: number;
   vatCents: number;
   totalIncVatCents: number;
+  paymentMethod?: string;
+  deliveryAddress?: Address;
+  createdAt?: string;
   lines?: CartLineInput[];
 }
 
@@ -217,9 +244,72 @@ export function createClient(
         method: 'POST',
         body: JSON.stringify(body),
       }),
+
+    // Staff: orders, cycles and stock (admin portal).
+    orders: () => req<Order[]>('/commerce/orders'),
+    cycles: () => req<CycleRecord[]>('/commerce/cycles'),
+    tickCycles: () => req<unknown>('/commerce/cycles/tick', { method: 'POST' }),
+    batches: () => req<Batch[]>('/stock/batches'),
+    releaseBatch: (id: string) =>
+      req<Batch>(`/stock/batches/${encodeURIComponent(id)}/release`, { method: 'POST' }),
+    recalls: () => req<Recall[]>('/stock/recalls'),
+    routes: () => req<DeliveryRoute[]>('/logistics/routes'),
+
+    // Staff: identity, access and audit.
+    auditLog: (filter: { entity?: string; actor?: string } = {}) =>
+      req<AuditRecord[]>(`/identity/audit${query(filter)}`),
+    roleChanges: () => req<unknown[]>('/identity/access/role-changes'),
+    elevations: () => req<unknown[]>('/identity/access/elevations'),
+    requestRoleChange: (body: { subjectId: string; from: string[]; to: string[] }) =>
+      req<unknown>('/identity/access/role-changes', { method: 'POST', body: JSON.stringify(body) }),
+    requestElevation: (body: { subjectId: string; role: string; reason: string; minutes: number }) =>
+      req<unknown>('/identity/access/elevations', { method: 'POST', body: JSON.stringify(body) }),
+
+    // Staff: accounts, payments and pricing.
+    invoices: () => req<Invoice[]>('/accounts/invoices'),
+    collections: () => req<CollectionAction[]>('/accounts/collections'),
+    settlements: () => req<Settlement[]>('/payments/reconciliation'),
+    settlementExceptions: () => req<Settlement[]>('/payments/reconciliation/exceptions'),
+    priceLists: () => req<PriceList[]>('/commerce/pricing'),
+    merchandising: () => req<MerchSection[]>('/commerce/merchandising'),
+    adReport: () => req<AdReport>('/ads/reporting'),
+    kpis: (range: { from?: string; to?: string; days?: number } = {}) =>
+      req<KpiReport>(`/analytics/kpis${query(range)}`),
+
+    // Advertiser portal.
+    campaigns: (orgId?: string) => req<Campaign[]>(`/ads/campaigns${query({ orgId })}`),
+    createCampaign: (body: CampaignInput) =>
+      req<Campaign>('/ads/campaigns', { method: 'POST', body: JSON.stringify(body) }),
+    submitCampaign: (id: string) =>
+      req<Campaign>(`/ads/campaigns/${encodeURIComponent(id)}/submit`, { method: 'POST' }),
+    wallet: (orgId: string) => req<WalletSummary>(`/ads/billing/${encodeURIComponent(orgId)}`),
+    topUpWallet: (body: { advertiserOrgId: string; amountCents: number; ref?: string }) =>
+      req<{ balanceCents: number }>('/ads/billing/top-up', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+
+    // Partner portal.
+    partnerSlots: (orgId?: string) => req<SlaughterSlot[]>(`/partners/slots${query({ orgId })}`),
+    confirmPartnerSlot: (id: string, orgId?: string) =>
+      req<SlaughterSlot>(`/partners/slots/${encodeURIComponent(id)}/confirm${query({ orgId })}`, {
+        method: 'POST',
+      }),
+    purchaseOrders: (orgId?: string) =>
+      req<PurchaseOrder[]>(`/partners/purchase-orders${query({ orgId })}`),
+    partnerDocuments: (orgId?: string) =>
+      req<PartnerDocument[]>(`/partners/documents${query({ orgId })}`),
+
+    // Driver sync (offline queue replay).
+    syncDriverEvents: (events: DriverEventInput[]) =>
+      req<DriverSyncResult>('/logistics/driver-sync', {
+        method: 'POST',
+        body: JSON.stringify({ events }),
+      }),
   };
 }
 
 export type ApiClient = ReturnType<typeof createClient>;
 
 export * from './view-models';
+export * from './staff-types';
