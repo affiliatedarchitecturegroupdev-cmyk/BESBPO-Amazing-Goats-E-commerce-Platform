@@ -40,3 +40,16 @@ Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 
 | T-035 | End-to-end tests for core journeys | 1 | qa | none |
 | T-036 | Deployment on Northflank and Koyeb | 0 | devops | gate:infra |
 | T-037 | Persist the payments stores (SQL adapters) | 1 | backend | gate:db,gate:payments |
+| T-038 | Commerce: promotions engine and store | 4 | backend | gate:pricing |
+| T-039 | Commerce: subscriptions and standing orders | 4 | backend | none |
+| T-040 | Commerce: merchandising sections and items | 4 | backend | none |
+| T-041 | Identity: users administration | 4 | backend | gate:rbac |
+| T-042 | Gateway: auth session and rate limiting | 4 | backend | gate:rbac |
+| T-043 | Ads: wallet billing and reporting | 4 | backend | gate:payments |
+| T-044 | Analytics: warehouse-backed KPIs | 4 | backend | none |
+| T-045 | AI forecast: persist buy suggestions | 4 | backend | none |
+| T-046 | Persist the commerce stores (SQL adapters) | 4 | backend | gate:db |
+| T-047 | Persist the identity, logistics and stock stores (SQL adapters) | 4 | backend | gate:db |
+| T-048 | Persist the ads, partners and notifications stores (SQL adapters) | 4 | backend | gate:db |
+| T-049 | Apps: wire storefront and trade portal to the gateway | 4 | frontend | none |
+| T-050 | Apps: wire admin, driver, advertiser and partner portals to the gateway | 4 | frontend | none |
