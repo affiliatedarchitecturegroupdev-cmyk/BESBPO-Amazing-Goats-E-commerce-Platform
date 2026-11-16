@@ -1,5 +1,6 @@
 import type { FulfilmentType } from '@ag/shared-types';
 import type { Badge } from '../lib/catalog';
+import type { ServedAd } from '../lib/placements';
 const LABEL: Record<FulfilmentType, string> = { in_stock: 'In stock', pre_order_cycle: 'Pre-order', reservation: 'Reserve', quote: 'Quote', seasonal_pre_order: 'Seasonal pre-order' };
 export function FulfilmentTag({ type, detail }: { type: FulfilmentType; detail?: string }) {
   return <span className="tag">{LABEL[type]}{detail ? ` · ${detail}` : ''}</span>;
@@ -31,4 +32,21 @@ export function SponsoredSlot({ slot, children }: { slot: string; children: Reac
       {children}
     </div>
   );
+}
+
+/**
+ * A served ad from the decisioning endpoint. The label is the one the service
+ * set, so a caller cannot render an ad without it; the whole thing links to the
+ * ad's destination when it has one.
+ */
+export function ServedAdSlot({ ad }: { ad: ServedAd }) {
+  const body = (
+    <div className="ad" data-slot={ad.slot} data-creative={ad.creativeId}>
+      <span className="tag ad">{ad.label}</span>
+      {ad.headline ? <strong>{ad.headline}</strong> : null}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={ad.assetUrl} alt={ad.headline ?? ad.label} />
+    </div>
+  );
+  return ad.destinationUrl ? <a href={ad.destinationUrl}>{body}</a> : body;
 }

@@ -10,9 +10,9 @@ files: ["services/ads/src/decisioning/**", "apps/storefront/**"]
 Ads: decisioning and storefront placements.
 
 ## Acceptance
-- [ ] Uses selectAds
-- [ ] Sponsored label on every ad
-- [ ] Tests added and passing
+- [x] Uses selectAds
+- [x] Sponsored label on every ad
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.
