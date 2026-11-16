@@ -1,6 +1,16 @@
 import { Module } from '@nestjs/common';
 import { DecisioningController } from './decisioning.controller';
-import { DecisioningService } from './decisioning.service';
+import { DecisioningService, FREQUENCY_STORE } from './decisioning.service';
+import { InMemoryFrequencyStore } from './frequency.store';
+import { AdsStoresModule } from '../ads-stores.module';
 
-@Module({ controllers: [DecisioningController], providers: [DecisioningService] })
+@Module({
+  imports: [AdsStoresModule],
+  controllers: [DecisioningController],
+  providers: [
+    DecisioningService,
+    { provide: FREQUENCY_STORE, useFactory: () => new InMemoryFrequencyStore() },
+  ],
+  exports: [DecisioningService],
+})
 export class DecisioningModule {}

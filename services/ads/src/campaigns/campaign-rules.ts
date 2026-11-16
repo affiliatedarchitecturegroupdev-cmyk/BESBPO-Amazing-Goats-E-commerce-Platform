@@ -288,7 +288,7 @@ export interface GoLiveCheck {
  */
 export function canGoLive(campaign: Campaign, creatives: readonly Creative[]): GoLiveCheck {
   const problems: string[] = [];
-  if (campaign.status !== 'approved' && campaign.status !== 'paused') {
+  if (campaign.status !== 'approved' && campaign.status !== 'paused' && campaign.status !== 'live') {
     problems.push(`campaign must be approved before it can run, it is ${campaign.status}`);
   }
   if (creatives.length === 0) problems.push('campaign has no creatives');
