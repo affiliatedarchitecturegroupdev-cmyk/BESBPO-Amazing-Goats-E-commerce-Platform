@@ -10,9 +10,9 @@ files: ["services/commerce/**", "db/seeds/**"]
 Dairy and fresh produce onboarding.
 
 ## Acceptance
-- [ ] Supplier compliance checks
-- [ ] Produce pre-order cycles
-- [ ] Tests added and passing
+- [x] Supplier compliance checks
+- [x] Produce pre-order cycles
+- [x] Tests added and passing
 
 ## Notes
 See docs for the relevant design section. Ask the human before touching gated paths.
