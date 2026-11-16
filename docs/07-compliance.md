@@ -18,3 +18,19 @@ Confirm with an attorney, the relevant departments and certifying bodies before 
 | Animals | Animal Diseases Act, Stock Theft Act | Movement papers, proof of ownership |
 
 Catalogue rows carry `product_compliance` (rule set, class or grade, packer, pack-station number, certificate expiry). Indigenous farm eggs stay on hold until a compliant pack station is arranged.
+
+## Label generator
+
+`services/commerce/src/compliance/label.ts` renders the R146 label for a pack as a pure function. Every label carries the same mandatory fields, and a rule set adds the ones it needs:
+
+| Field | Required by |
+|---|---|
+| Product name, net weight, responsible party, country of origin, batch number, date marking, storage instructions | every label (R146) |
+| Ingredient list | `processed_meat_copacker` |
+| Class or grade | `meat_abattoir`, `poultry_abattoir`, `egg_pack_station` |
+| Pack-station number | `egg_pack_station` |
+
+`buildLabel` always renders the mandatory blocks; an unfilled one reads `[required: …]` rather than disappearing, so a preview never hides a gap, and `missing` lists what is outstanding. `GET /commerce/compliance/labels/:sku` previews a variant (product name, pack and net weight from the catalogue; rule set, class/grade, packer and pack station from `product_compliance`), and `GET /commerce/compliance/labels/incomplete` returns every variant with a static gap — the class/grade and pack-station fields a rule set still needs. Batch and date marking are per-pack and filled at packing time, so they are not part of the gap report.
+
+A label is valid only when `missing` is empty. A lapsed `certificate_expiry` is reported separately as `certificateExpired`. The generator summarises the regulation; confirm the final wording with an attorney.
+

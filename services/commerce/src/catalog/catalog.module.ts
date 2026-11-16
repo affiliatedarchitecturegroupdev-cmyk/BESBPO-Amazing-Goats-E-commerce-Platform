@@ -5,5 +5,6 @@ import { CATALOGUE_STORE, CatalogService, seedCatalogueStore } from './catalog.s
 @Module({
   controllers: [CatalogController],
   providers: [CatalogService, { provide: CATALOGUE_STORE, useFactory: seedCatalogueStore }],
+  exports: [CATALOGUE_STORE],
 })
 export class CatalogModule {}
