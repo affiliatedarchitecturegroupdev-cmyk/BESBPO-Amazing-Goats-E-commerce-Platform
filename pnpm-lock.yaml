@@ -607,9 +607,15 @@ importers:
 
   services/identity:
     dependencies:
+      '@ag/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@ag/nest-auth':
         specifier: workspace:*
         version: link:../../packages/nest-auth
+      '@ag/nest-db':
+        specifier: workspace:*
+        version: link:../../packages/nest-db
       '@ag/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -656,9 +662,15 @@ importers:
 
   services/logistics:
     dependencies:
+      '@ag/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@ag/nest-auth':
         specifier: workspace:*
         version: link:../../packages/nest-auth
+      '@ag/nest-db':
+        specifier: workspace:*
+        version: link:../../packages/nest-db
       '@ag/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -858,9 +870,15 @@ importers:
 
   services/stock:
     dependencies:
+      '@ag/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@ag/nest-auth':
         specifier: workspace:*
         version: link:../../packages/nest-auth
+      '@ag/nest-db':
+        specifier: workspace:*
+        version: link:../../packages/nest-db
       '@ag/observability':
         specifier: workspace:*
         version: link:../../packages/observability

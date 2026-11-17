@@ -71,3 +71,15 @@ jobs:
       - run: pnpm --filter @ag/accounts test
         env:
           DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      # The identity, logistics and stock SQL adapters exercise their real
+      # schemas (including the id bridges in migration 0016); they skip without
+      # DATABASE_URL.
+      - run: pnpm --filter @ag/identity test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      - run: pnpm --filter @ag/logistics test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      - run: pnpm --filter @ag/stock test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
