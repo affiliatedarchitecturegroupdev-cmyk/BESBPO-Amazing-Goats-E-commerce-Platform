@@ -53,7 +53,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @ag/db build
+      # Build every shared package: the adapter tests below import service
+      # sources, which pull in @ag/rbac, @ag/nest-auth and @ag/observability as
+      # well as @ag/db, so building only @ag/db is not enough.
+      - run: pnpm --filter "./packages/*" build
       # The @ag/db adapter integration tests need a live database (they skip when
       # DATABASE_URL is unset, so the node job does not run them). They connect
       # as the service's superuser and provision their own NOSUPERUSER role to
