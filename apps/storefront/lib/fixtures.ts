@@ -1,5 +1,4 @@
 import type { CatalogueItem } from '@ag/api-client';
-import type { CartLine } from './cart';
 import type { ServedAd } from './placements';
 
 /**
@@ -38,11 +37,6 @@ export const FIXTURE_CATALOGUE: CatalogueItem[] = [
     channel: 'both', phase: 1, lineCode: 'AG-LG', lineName: 'Live goats', categorySlug: 'live-animals',
     halaalAvailable: false, active: true, priceCents: 320000,
   },
-];
-
-export const FIXTURE_CART_LINES: CartLine[] = [
-  { sku: 'AG-LM-001', name: 'Full lamb box', qty: 1, unitPriceExVatCents: 189900, fulfilment: 'pre_order_cycle', temperature: 'chilled' },
-  { sku: 'AG-LG-005', name: 'Boer wether', qty: 1, unitPriceExVatCents: 320000, fulfilment: 'reservation', temperature: 'live' },
 ];
 
 export const FIXTURE_ADS: ServedAd[] = [
