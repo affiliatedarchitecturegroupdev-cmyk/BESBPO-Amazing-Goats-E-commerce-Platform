@@ -15,5 +15,10 @@ One Postgres (Northflank addon, Johannesburg). One schema per bounded context: i
   ./scripts/test-rls.sh    # applies migrations + seeds, then db/tests/rls.sql
   ```
   `db/tests/rls.sql` is the source of truth for the policies: default deny, org and user scoping, staff bypass, and the superuser-bypass trap. CI runs it in the `db` job.
+  `scripts/migrate.sh` records each applied file in `public.schema_migrations`, so
+  it is safe to run repeatedly (production runs it on every deploy via the
+  Northflank migration job): applied files are skipped and only new ones run. A
+  migration that fails runs in its own transaction, so it leaves no half-applied
+  schema and is not recorded.
 - Seeds: roles and permissions, ad slots, and the staged catalogue CSV.
 See `docs/09-data-model.md` for the entity map.

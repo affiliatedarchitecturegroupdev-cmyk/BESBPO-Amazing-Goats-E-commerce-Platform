@@ -114,6 +114,7 @@
                   "secrets": {
                     "variables": {
                       "NODE_ENV": "production",
+                      "STORE_DRIVER": "sql",
                       "JWT_ISSUER": "${args.JWT_ISSUER}",
                       "JWT_AUDIENCE": "${args.JWT_AUDIENCE}",
                       "PEACH_ENTITY_ID": "${args.PEACH_ENTITY_ID}",
@@ -145,6 +146,96 @@
                     "nfObjects": [],
                     "tags": []
                   }
+                }
+              },
+              {
+                "kind": "Workflow",
+                "ref": "migrate",
+                "spec": {
+                  "type": "sequential",
+                  "steps": [
+                    {
+                      "kind": "BuildService",
+                      "ref": "migrate-builder",
+                      "spec": {
+                        "name": "ag-migrate-builder",
+                        "description": "Builds the migration image (psql plus db/migrations and db/seeds).",
+                        "billing": {
+                          "deploymentPlan": "nf-compute-20",
+                          "buildPlan": "nf-compute-200-8"
+                        },
+                        "vcsData": {
+                          "projectUrl": "https://github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform",
+                          "projectType": "github",
+                          "projectBranch": "main"
+                        },
+                        "buildSettings": {
+                          "dockerfile": {
+                            "dockerFilePath": "/db/Dockerfile",
+                            "dockerWorkDir": "/"
+                          }
+                        },
+                        "buildConfiguration": {
+                          "pathIgnoreRules": ["docs/**", "*.md", "tasks/**"]
+                        },
+                        "disabledCI": false,
+                        "buildArguments": {}
+                      }
+                    },
+                    {
+                      "kind": "ManualJob",
+                      "ref": "ag-migrate",
+                      "spec": {
+                        "name": "ag-migrate",
+                        "description": "Apply db/migrations and db/seeds once, in order (public.schema_migrations is the ledger).",
+                        "billing": {
+                          "deploymentPlan": "nf-compute-20"
+                        },
+                        "backoffLimit": 0,
+                        "runOnSourceChange": "never",
+                        "activeDeadlineSeconds": 1800,
+                        "deployment": {
+                          "docker": { "configType": "default" },
+                          "internal": {
+                            "id": "${refs.migrate-builder.id}",
+                            "branch": "main",
+                            "buildSHA": "latest"
+                          }
+                        },
+                        "buildConfiguration": {
+                          "pathIgnoreRules": ["docs/**", "*.md", "tasks/**"]
+                        },
+                        "runtimeEnvironment": {},
+                        "buildArguments": {}
+                      }
+                    },
+                    {
+                      "kind": "Build",
+                      "spec": {
+                        "id": "${refs.migrate-builder.id}",
+                        "type": "service",
+                        "branch": "main"
+                      },
+                      "condition": "success"
+                    },
+                    {
+                      "kind": "Condition",
+                      "spec": {
+                        "kind": "Addon",
+                        "spec": {
+                          "type": "running",
+                          "data": { "addonId": "${refs.postgres.id}" }
+                        }
+                      }
+                    },
+                    {
+                      "kind": "JobRun",
+                      "spec": {
+                        "jobId": "${refs.ag-migrate.id}"
+                      },
+                      "condition": "success"
+                    }
+                  ]
                 }
               },
               {
