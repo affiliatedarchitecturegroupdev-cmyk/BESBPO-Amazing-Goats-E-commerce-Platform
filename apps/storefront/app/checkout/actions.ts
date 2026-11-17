@@ -12,6 +12,7 @@ import { gatewayClient } from '../../lib/gateway';
  */
 export async function placeOrder(formData: FormData): Promise<void> {
   const lines = JSON.parse(String(formData.get('lines') ?? '[]')) as CartLineInput[];
+  if (lines.length === 0) redirect('/cart');
   const deliveryFeeCents = Number(formData.get('deliveryFeeCents') ?? 0) || undefined;
   const zoneId = String(formData.get('zoneId') ?? '') || undefined;
 

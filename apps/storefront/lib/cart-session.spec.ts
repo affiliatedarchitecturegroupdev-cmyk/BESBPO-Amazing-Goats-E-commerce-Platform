@@ -1,11 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_DELIVERY_FEE_CENTS, DEFAULT_ZONE_ID, parseCart } from './cart-session';
-import { FIXTURE_CART_LINES } from './fixtures';
+import {
+  DEFAULT_DELIVERY_FEE_CENTS,
+  DEFAULT_ZONE_ID,
+  emptyCart,
+  parseCart,
+  serializeCart,
+} from './cart-session';
 
 describe('parseCart', () => {
-  it('falls back to the fixture cart when there is no cookie', () => {
+  it('is an empty cart when there is no cookie', () => {
     const cart = parseCart(undefined);
-    expect(cart.lines).toEqual(FIXTURE_CART_LINES);
+    expect(cart.lines).toEqual([]);
     expect(cart.deliveryFeeCents).toBe(DEFAULT_DELIVERY_FEE_CENTS);
     expect(cart.zoneId).toBe(DEFAULT_ZONE_ID);
   });
@@ -28,7 +33,24 @@ describe('parseCart', () => {
     expect(cart.zoneId).toBe('3');
   });
 
-  it('falls back to the fixture cart on malformed JSON', () => {
-    expect(parseCart('not-json').lines).toEqual(FIXTURE_CART_LINES);
+  it('is an empty cart on malformed JSON', () => {
+    expect(parseCart('not-json').lines).toEqual([]);
+  });
+});
+
+describe('serializeCart', () => {
+  it('round-trips through parseCart', () => {
+    const cart = {
+      lines: [{ sku: 'AG-EG-001', name: 'Eggs tray', qty: 2, unitPriceExVatCents: 8500, fulfilment: 'in_stock' as const, temperature: 'ambient' as const }],
+      deliveryFeeCents: 0,
+      zoneId: 1,
+    };
+    expect(parseCart(serializeCart(cart))).toEqual(cart);
+  });
+});
+
+describe('emptyCart', () => {
+  it('has no lines and the delivery defaults', () => {
+    expect(emptyCart()).toEqual({ lines: [], deliveryFeeCents: DEFAULT_DELIVERY_FEE_CENTS, zoneId: DEFAULT_ZONE_ID });
   });
 });

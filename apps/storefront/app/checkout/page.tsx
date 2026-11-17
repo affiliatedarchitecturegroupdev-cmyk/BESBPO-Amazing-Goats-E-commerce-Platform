@@ -1,4 +1,5 @@
 // Wireframe: docs/wireframes/index.html#sf-checkout
+import Link from 'next/link';
 import { cartTotals, hasReservation, toOrderLines } from '../../lib/cart';
 import { cartSession } from '../../lib/cart-session';
 import { paymentOptions, totalWithDiscount, TRADE_NOTE } from '../../lib/payments';
@@ -10,6 +11,15 @@ export const dynamic = 'force-dynamic';
 
 export default async function CheckoutPage({ searchParams }: { searchParams: { error?: string } }) {
   const cart = cartSession();
+  if (cart.lines.length === 0) {
+    return (
+      <section>
+        <h1>Checkout</h1>
+        <p className="p">Your cart is empty, so there is nothing to check out.</p>
+        <Link className="btn" href="/shop/lamb">Shop the range</Link>
+      </section>
+    );
+  }
   const totals = cartTotals(cart);
   const options = paymentOptions(totals.totalIncVatCents, { hasReservation: hasReservation(cart.lines) });
   const lines = JSON.stringify(toOrderLines(cart.lines));

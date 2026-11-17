@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CutoffBanner } from '../../../components/CutoffBanner';
+import { AddToCartButton } from '../../../components/AddToCartButton';
 import { FulfilmentTag, Badges, SponsoredSlot } from '../../../components/FulfilmentTag';
 import { ProductCard } from '../../../components/ProductCard';
 import { formatRand } from '../../../lib/format';
@@ -43,7 +44,14 @@ export default async function ProductSlugPage({ params }: { params: { slug: stri
       <p className="p">Delivered chilled in an insulated branded box.</p>
 
       <div className="row"><span>Subscribe and save</span><span>Off</span></div>
-      <Link className="btn" href="/cart">Add to cart</Link>
+      {v.priceCents != null && v.fulfilment !== 'quote' ? (
+        <AddToCartButton
+          item={{ sku: v.sku, name: v.name, fulfilment: v.fulfilment, temperature: v.temperature, priceCents: v.priceCents }}
+          redirectTo={`/product/${params.slug}`}
+        />
+      ) : (
+        <p className="p">Price on request — ask us for a quote.</p>
+      )}
       <Link className="btn o" href="/trade">Reserve for ceremony (quote)</Link>
 
       <h2>What is in the box</h2>
