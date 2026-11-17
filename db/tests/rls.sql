@@ -17,8 +17,8 @@ BEGIN;
 -- A stand-in for the application role.
 DROP ROLE IF EXISTS ag_rls_test;
 CREATE ROLE ag_rls_test LOGIN PASSWORD 'test' NOSUPERUSER NOBYPASSRLS;
-GRANT USAGE ON SCHEMA sales, accounts, ads, identity, catalog TO ag_rls_test;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA sales, accounts, ads, identity, catalog TO ag_rls_test;
+GRANT USAGE ON SCHEMA sales, accounts, ads, identity, catalog, notifications TO ag_rls_test;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA sales, accounts, ads, identity, catalog, notifications TO ag_rls_test;
 
 -- Minimal catalogue row so order lines have a variant to reference.
 INSERT INTO catalog.product_lines (code, name, grp, phase) VALUES ('RLS', 'RLS line', 'test', 1);
@@ -49,6 +49,15 @@ INSERT INTO ads.campaigns (id, advertiser_org_id, name, budget_cents, pricing) V
   ('2a000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'RLS Campaign A', 100000, 'flat'),
   ('2b000000-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', 'RLS Campaign B', 100000, 'flat');
 
+-- The dispatch log and consent are support-only records (migration 0017), so a
+-- non-staff session must see none of them.
+INSERT INTO notifications.messages (id, channel, template_key, contact_ref, status, reason) VALUES
+  ('RLS-MSG-A', 'email', 'order_confirmation', 'rls-a', 'sent', 'transactional'),
+  ('RLS-MSG-B', 'sms', 'cutoff_reminder', 'rls-b', 'sent', 'transactional');
+INSERT INTO notifications.consent (contact_ref, marketing) VALUES
+  ('rls-a', ARRAY['email']::text[]),
+  ('rls-b', ARRAY['sms']::text[]);
+
 CREATE FUNCTION pg_temp.assert_eq(actual bigint, expected bigint, label text) RETURNS void AS $$
 BEGIN
   IF actual IS DISTINCT FROM expected THEN
@@ -64,6 +73,8 @@ SET ROLE ag_rls_test;
 SELECT pg_temp.assert_eq((SELECT count(*) FROM sales.orders), 0, 'orders default deny');
 SELECT pg_temp.assert_eq((SELECT count(*) FROM accounts.invoices), 0, 'invoices default deny');
 SELECT pg_temp.assert_eq((SELECT count(*) FROM ads.campaigns), 0, 'campaigns default deny');
+SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.messages), 0, 'messages default deny');
+SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.consent), 0, 'consent default deny');
 
 -- Staff bypass. Savepoints (not COMMIT) keep everything inside the outer
 -- transaction so the final ROLLBACK undoes the whole test.
@@ -72,6 +83,8 @@ SAVEPOINT s;
   SELECT pg_temp.assert_eq((SELECT count(*) FROM sales.orders), 2, 'orders staff sees all');
   SELECT pg_temp.assert_eq((SELECT count(*) FROM accounts.invoices), 2, 'invoices staff sees all');
   SELECT pg_temp.assert_eq((SELECT count(*) FROM ads.campaigns), 2, 'campaigns staff sees all');
+  SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.messages), 2, 'messages staff sees all');
+  SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.consent), 2, 'consent staff sees all');
 ROLLBACK TO SAVEPOINT s;
 
 -- Org A sees only its own rows.
@@ -81,6 +94,8 @@ SAVEPOINT s;
   SELECT pg_temp.assert_eq((SELECT count(*) FROM sales.orders WHERE org_id = '22222222-2222-2222-2222-222222222222'), 0, 'orders org A cannot see B');
   SELECT pg_temp.assert_eq((SELECT count(*) FROM accounts.invoices), 1, 'invoices org A sees own');
   SELECT pg_temp.assert_eq((SELECT count(*) FROM ads.campaigns), 1, 'campaigns org A sees own');
+  SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.messages), 0, 'messages org A sees none (support-only)');
+  SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.consent), 0, 'consent org A sees none (support-only)');
 ROLLBACK TO SAVEPOINT s;
 
 -- Org B sees only its own rows.

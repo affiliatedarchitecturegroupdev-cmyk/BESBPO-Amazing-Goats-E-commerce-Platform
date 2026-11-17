@@ -32,7 +32,7 @@ export class DispatchService {
     return this.transports.has(channel);
   }
 
-  list(): DispatchRecord[] {
+  async list(): Promise<DispatchRecord[]> {
     return this.log.list();
   }
 
@@ -42,14 +42,14 @@ export class DispatchService {
    * who has not opted in never leaves the service.
    */
   async send(input: SendInput, at: Date = new Date()): Promise<DispatchRecord> {
-    const decision = decideConsent(this.consent, {
+    const decision = await decideConsent(this.consent, {
       contactId: input.recipient.contactId,
       channel: input.channel,
       kind: input.kind,
     });
 
     const base = {
-      id: `msg_${at.getTime()}_${this.log.list().length}`,
+      id: `msg_${at.getTime()}_${(await this.log.list()).length}`,
       channel: input.channel,
       templateKey: input.templateKey,
       contactId: input.recipient.contactId,
@@ -67,7 +67,7 @@ export class DispatchService {
 
     try {
       const result = await transport.send(input.recipient, input.message);
-      return this.log.record({
+      return await this.log.record({
         ...base,
         status: 'sent',
         reason: decision.reason,
