@@ -25,7 +25,9 @@ Anything promotional does, per POPIA (see `docs/07-compliance.md`, "opt-in marke
 marketing message only when the contact has opted in to that exact channel; an unknown
 contact is never sent marketing, because consent cannot be assumed. Consent is stored
 per channel, so a customer can allow email but not WhatsApp. The in-memory store is the
-default; the SQL adapter reads `identity.users.marketing_opt_in`.
+default; the SQL adapter reads and writes `notifications.consent`, and the dispatch log
+is the `notifications.messages` table. Both are support-only records, so only a staff
+session sees them. `STORE_DRIVER=sql` selects the SQL adapters.
 
 ## Dispatch
 

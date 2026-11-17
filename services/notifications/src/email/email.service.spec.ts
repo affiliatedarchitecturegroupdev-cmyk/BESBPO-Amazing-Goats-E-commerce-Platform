@@ -20,9 +20,9 @@ function build() {
 }
 
 describe('EmailService', () => {
-  it('starts empty', () => {
+  it('starts empty', async () => {
     const { service } = build();
-    expect(service.list()).toEqual([]);
+    expect(await service.list()).toEqual([]);
   });
 
   it('sends a transactional template over email and lists it', async () => {
@@ -40,6 +40,6 @@ describe('EmailService', () => {
     expect(record.status).toBe('sent');
     expect(record.channel).toBe('email');
     expect(sent).toHaveLength(1);
-    expect(service.list()).toHaveLength(1);
+    expect(await service.list()).toHaveLength(1);
   });
 });

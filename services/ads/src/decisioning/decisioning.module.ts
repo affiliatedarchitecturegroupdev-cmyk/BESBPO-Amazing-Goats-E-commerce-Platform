@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
+import { selectStore } from '@ag/db';
+import type { Db } from '@ag/db';
+import { AG_DB } from '@ag/nest-db';
 import { DecisioningController } from './decisioning.controller';
 import { DecisioningService, FREQUENCY_STORE } from './decisioning.service';
-import { InMemoryFrequencyStore } from './frequency.store';
+import { FrequencyStore, InMemoryFrequencyStore } from './frequency.store';
+import { PgFrequencyStore } from './frequency.sql-store';
 import { AdsStoresModule } from '../ads-stores.module';
 
 @Module({
@@ -9,7 +13,12 @@ import { AdsStoresModule } from '../ads-stores.module';
   controllers: [DecisioningController],
   providers: [
     DecisioningService,
-    { provide: FREQUENCY_STORE, useFactory: () => new InMemoryFrequencyStore() },
+    {
+      provide: FREQUENCY_STORE,
+      useFactory: (db?: Db) =>
+        selectStore<FrequencyStore>(new InMemoryFrequencyStore(), () => new PgFrequencyStore(db!)),
+      inject: [{ token: AG_DB, optional: true }],
+    },
   ],
   exports: [DecisioningService],
 })

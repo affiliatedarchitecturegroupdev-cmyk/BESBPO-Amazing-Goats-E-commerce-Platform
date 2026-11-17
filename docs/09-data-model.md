@@ -1,5 +1,5 @@
 # Data model
-Ten schemas, one per bounded context. See `db/migrations`. Money in cents, UTC times, UUID keys.
+Eleven schemas, one per bounded context. See `db/migrations`. Money in cents, UTC times, UUID keys.
 
 A `credit_limits` row is the proposal for an org and carries its decision: `status` is `proposed` until a person approves it (two distinct approvers above the R100,000 threshold), `approved` when in force, or `rejected`. `collection_actions` rows are the dunning plan for an invoice (see `docs/03-credit-control.md`).
 
@@ -14,6 +14,7 @@ A `credit_limits` row is the proposal for an org and carries its decision: `stat
 | payments | intents, payments, refunds, provider_events, settlements, settlement_lines, payouts, escrow_transactions |
 | ads | advertisers, slots, campaigns, creatives, wallet_ledger, impressions (partitioned), clicks |
 | partners | purchase_orders, purchase_order_lines, slots, documents |
+| notifications | messages, consent |
 | audit | audit_log, data_access_log (append-only) |
 
 ```mermaid
@@ -52,4 +53,4 @@ The gateway sets `app.staff`, `app.org_id` and `app.user_id` per request after R
 - A policy with only `USING` also governs `INSERT` and `UPDATE`.
 - Child tables inherit the parent's visibility by testing the parent row (which is itself subject to RLS), so a line is visible exactly when its order or invoice is.
 
-`db/tests/rls.sql` is the source of truth and runs in the CI `db` job. It covers orders, invoices and campaigns (the acceptance criteria) plus the tables added in 0011: order lines and events, reservations, subscriptions, quotes, reviews, trade accounts, credit applications, documents, bureau reports, credit limits, credit events, sureties, invoice lines, allocations, collection actions, disputes, advertisers, wallet ledger, creatives, partner documents and slots, purchase order lines, payouts, payment intents, payments, refunds, stops, deliveries and proof of delivery.
+`db/tests/rls.sql` is the source of truth and runs in the CI `db` job. It covers orders, invoices and campaigns (the acceptance criteria) plus the tables added in 0011: order lines and events, reservations, subscriptions, quotes, reviews, trade accounts, credit applications, documents, bureau reports, credit limits, credit events, sureties, invoice lines, allocations, collection actions, disputes, advertisers, wallet ledger, creatives, partner documents and slots, purchase order lines, payouts, payment intents, payments, refunds, stops, deliveries and proof of delivery. `0017_ads_partners_notifications_persistence.sql` adds the notifications schema (messages, consent) and the ads and partners bridge columns; the notifications tables are support-only, so only a staff session sees them.

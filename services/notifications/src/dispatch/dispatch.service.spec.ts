@@ -39,7 +39,7 @@ describe('DispatchService', () => {
     expect(record.status).toBe('sent');
     expect(record.providerRef).toBe('ref-1');
     expect(sent).toHaveLength(1);
-    expect(log.list()).toHaveLength(1);
+    expect(await log.list()).toHaveLength(1);
   });
 
   it('suppresses a marketing message when the contact has not opted in', async () => {

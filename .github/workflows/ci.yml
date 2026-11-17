@@ -86,3 +86,15 @@ jobs:
       - run: pnpm --filter @ag/stock test
         env:
           DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      # The ads, partners and notifications SQL adapters exercise the ads,
+      # partners and notifications schemas (including migration 0017); they skip
+      # without DATABASE_URL.
+      - run: pnpm --filter @ag/ads test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      - run: pnpm --filter @ag/partners test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      - run: pnpm --filter @ag/notifications test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag

@@ -7,8 +7,9 @@ import type { DispatchRecord } from '../dispatch/dispatch';
 export class EmailService {
   constructor(private readonly dispatch: DispatchService) {}
 
-  list(): DispatchRecord[] {
-    return this.dispatch.list().filter((entry) => entry.channel === 'email');
+  async list(): Promise<DispatchRecord[]> {
+    const entries = await this.dispatch.list();
+    return entries.filter((entry) => entry.channel === 'email');
   }
 
   /** Renders the template and sends over email, subject to consent. */

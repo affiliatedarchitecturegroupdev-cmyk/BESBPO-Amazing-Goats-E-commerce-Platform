@@ -10,7 +10,7 @@ export class SmsController {
 
   @Get()
   @RequirePermissions('support:manage')
-  list(): DispatchRecord[] {
+  list(): Promise<DispatchRecord[]> {
     return this.service.list();
   }
 
