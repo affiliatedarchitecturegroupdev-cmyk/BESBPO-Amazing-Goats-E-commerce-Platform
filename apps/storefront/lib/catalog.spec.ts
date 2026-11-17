@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { badgesFor, byCategory, CATEGORIES, featuredBoxes, getBySku, toStorefrontItems } from './catalog';
+import { badgesFor, byCategory, CATEGORIES, featuredBoxes, getBySku, isBoxItem, toStorefrontItems } from './catalog';
 import { FIXTURE_CATALOGUE } from './fixtures';
 
 const items = toStorefrontItems(FIXTURE_CATALOGUE);
@@ -28,6 +28,14 @@ describe('catalogue view model', () => {
 
   it('offers ready-made bundles for the home page', () => {
     expect(featuredBoxes(items).map((b) => b.sku)).toContain('AG-BX-001');
+  });
+
+  it('finds the box line by SKU prefix even when the category slug is missing', () => {
+    expect(isBoxItem({ sku: 'AG-BX-001' })).toBe(true);
+    expect(isBoxItem({ sku: 'AG-LM-001' })).toBe(false);
+    // A catalogue row with no category slug still surfaces the boxes.
+    const noSlug = items.map((i) => ({ ...i, category: 'unknown' }));
+    expect(featuredBoxes(noSlug).map((b) => b.sku)).toEqual(['AG-BX-001']);
   });
 
   it('shows the halaal badge for a halaal item and the in-stock flag for stocked goods', () => {

@@ -91,6 +91,125 @@ export function coerceItems(payload: unknown): Variant[] {
   return arr.map(toCatalogueItem).filter((v): v is Variant => v !== null);
 }
 
+/**
+ * A catalogue row with the fields the storefront view model needs beyond
+ * `Variant` (the commerce `CatalogueItem` carries them; `Variant` does not).
+ */
+export interface BffCatalogueItem extends Variant {
+  categorySlug: string | null;
+  lineName: string;
+  halaalAvailable: boolean;
+  active: boolean;
+}
+
+/** Normalise one upstream record into a full catalogue row, or null when it has no SKU. */
+export function toBffCatalogueItem(raw: unknown): BffCatalogueItem | null {
+  const base = toCatalogueItem(raw);
+  if (!base) return null;
+  const r = raw as Record<string, unknown>;
+  return {
+    ...base,
+    categorySlug: typeof r.categorySlug === 'string' ? r.categorySlug : null,
+    lineName: typeof r.lineName === 'string' ? r.lineName : '',
+    halaalAvailable: r.halaalAvailable === true,
+    active: r.active !== false,
+  };
+}
+
+/** Coerce an upstream catalogue payload into full catalogue rows. */
+export function coerceBffItems(payload: unknown): BffCatalogueItem[] {
+  const arr = Array.isArray(payload)
+    ? payload
+    : typeof payload === 'object' && payload !== null && Array.isArray((payload as { items?: unknown }).items)
+      ? ((payload as { items: unknown[] }).items)
+      : [];
+  return arr.map(toBffCatalogueItem).filter((v): v is BffCatalogueItem => v !== null);
+}
+
+/** One resolved merchandising tile: the catalogue row plus its optional badge. */
+export interface ResolvedItemView {
+  sku: string;
+  name: string;
+  pack: string;
+  badge: string | null;
+  item: BffCatalogueItem;
+}
+
+/** A resolved merchandising section, ready to render. */
+export interface ResolvedSectionView {
+  code: string;
+  title: string;
+  page: string;
+  items: ResolvedItemView[];
+}
+
+/** The pages a merchandising section can live on, mirroring the commerce enum. */
+export const MERCH_PAGE_NAMES = ['home', 'category', 'shop'] as const;
+export type BffMerchPage = (typeof MERCH_PAGE_NAMES)[number];
+
+/** Parse a page name, defaulting to `home` for anything unknown. */
+export function merchPageFrom(raw: unknown): BffMerchPage {
+  return typeof raw === 'string' && (MERCH_PAGE_NAMES as readonly string[]).includes(raw)
+    ? (raw as BffMerchPage)
+    : 'home';
+}
+
+/** A resolved tile from the commerce merchandising response, or null when unusable. */
+export function toResolvedItem(raw: unknown): ResolvedItemView | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  const item = toBffCatalogueItem(r.item);
+  if (!item) return null;
+  return {
+    sku: typeof r.sku === 'string' ? r.sku : item.sku,
+    name: typeof r.name === 'string' ? r.name : item.name,
+    pack: typeof r.pack === 'string' ? r.pack : item.pack,
+    badge: typeof r.badge === 'string' ? r.badge : null,
+    item,
+  };
+}
+
+/**
+ * Coerce the commerce merchandising response (an array of resolved sections, or
+ * `{sections:[...]}`) into render-ready sections. A section with no code, or
+ * with every tile unusable, is dropped rather than rendered empty.
+ */
+export function coerceSections(payload: unknown): ResolvedSectionView[] {
+  const arr = Array.isArray(payload)
+    ? payload
+    : typeof payload === 'object' && payload !== null && Array.isArray((payload as { sections?: unknown }).sections)
+      ? ((payload as { sections: unknown[] }).sections)
+      : [];
+  const out: ResolvedSectionView[] = [];
+  for (const raw of arr) {
+    if (typeof raw !== 'object' || raw === null) continue;
+    const r = raw as Record<string, unknown>;
+    if (typeof r.code !== 'string' || r.code === '') continue;
+    const items = (Array.isArray(r.items) ? r.items : [])
+      .map(toResolvedItem)
+      .filter((i): i is ResolvedItemView => i !== null);
+    out.push({
+      code: r.code,
+      title: typeof r.title === 'string' ? r.title : r.code,
+      page: typeof r.page === 'string' ? r.page : '',
+      items,
+    });
+  }
+  return out;
+}
+
+/** Keep only the tiles a view may see, and drop any section left empty. */
+export function visibleSections(sections: ResolvedSectionView[], view: ViewChannel): ResolvedSectionView[] {
+  return sections
+    .map((s) => ({ ...s, items: s.items.filter((i) => visibleTo(i.item.channel, view)) }))
+    .filter((s) => s.items.length > 0);
+}
+
+/** A tile for a plain catalogue row, used by the fallback section. */
+export function toItemView(item: BffCatalogueItem): ResolvedItemView {
+  return { sku: item.sku, name: item.name, pack: item.pack, badge: null, item };
+}
+
 /** Public orders close at the cut-off; trade orders close at the trade lock. */
 export function isOrderOpen(
   view: ViewChannel,

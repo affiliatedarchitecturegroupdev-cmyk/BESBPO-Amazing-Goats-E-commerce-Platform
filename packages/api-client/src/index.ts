@@ -92,10 +92,42 @@ export interface CycleInfo {
   orderOpen: boolean;
 }
 
+/** A catalogue row the gateway returns for a merchandising tile (BFF `BffCatalogueItem`). */
+export interface MerchCatalogueItem extends CatalogueItem {
+  categorySlug: string | null;
+  lineName: string;
+  halaalAvailable: boolean;
+  active: boolean;
+}
+
+/** One tile in a resolved merchandising section, with its optional badge. */
+export interface ResolvedMerchItem {
+  sku: string;
+  name: string;
+  pack: string;
+  badge: string | null;
+  item: MerchCatalogueItem;
+}
+
+/** A resolved merchandising section, ready to render. */
+export interface ResolvedSection {
+  code: string;
+  title: string;
+  page: string;
+  items: ResolvedMerchItem[];
+}
+
+/** The merchandising sections the gateway resolved for a page. */
+export interface MerchandisingResponse {
+  view: 'public' | 'trade';
+  page: string;
+  sections: ResolvedSection[];
+}
+
 export interface HomeResponse {
   view: 'public' | 'trade';
   cycle: CycleInfo;
-  sections: { id: string; items: Variant[] }[];
+  sections: ResolvedSection[];
 }
 
 /** One cart line, as the commerce order endpoint accepts it. */
@@ -216,6 +248,10 @@ export function createClient(
   return {
     // Catalogue and cycles.
     home: () => req<HomeResponse>('/gateway/bff/home'),
+    // The curated, resolved sections for a storefront page (the staff
+    // `merchandising()` below reads the raw sections for the admin screens).
+    merchandisingPage: (page = 'home') =>
+      req<MerchandisingResponse>(`/gateway/bff/merchandising${query({ page })}`),
     catalogue: (filters: CatalogueFilters = {}) =>
       req<CatalogueItem[]>(`/commerce/catalog${query({ ...filters })}`),
     item: (sku: string) => req<CatalogueItem>(`/commerce/catalog/${encodeURIComponent(sku)}`),
