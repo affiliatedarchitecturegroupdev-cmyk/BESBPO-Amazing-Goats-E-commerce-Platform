@@ -52,10 +52,33 @@ No secret is checked in. The template declares `arguments` (`JWT_ISSUER`,
 `PEACH_ACCESS_TOKEN`, `WHATSAPP_TOKEN`, and so on); fill them in when you run
 the template, and they are written into the `ag-app-secrets` secret group as
 `${args.*}` references. The group also links the addons so `DATABASE_URL` and
-`REDIS_URL` resolve to the addon connection strings, with no copy-paste.
+`REDIS_URL` resolve to the addon connection strings, with no copy-paste. It also
+sets `STORE_DRIVER=sql`, so every service runs the SQL adapters (ADR 0012)
+instead of the in-memory defaults.
 
 Changing any of this file needs the `human-approved` label (`infra/**` is a
 gated path).
+
+### Migrations
+
+The template runs migrations before it starts the services. A `BuildService`
+builds `db/Dockerfile` (the `postgres:16` image plus `db/` and
+`scripts/migrate.sh`), a `ManualJob` deploys that image, and a `Build` →
+`Condition` (Postgres running) → `JobRun` chain runs it inside the `migrate`
+workflow, which sits before the service nodes.
+
+`scripts/migrate.sh` applies each file once and records it in
+`public.schema_migrations`, so re-running the job (on a redeploy, or by hand) is
+a no-op and only new files apply. Each migration runs in one transaction, so a
+failure leaves no half-applied schema and is not recorded. The image carries no
+credentials: `DATABASE_URL` comes from the secret group at run time.
+
+Locally the same script is the entry point:
+
+```bash
+./scripts/migrate.sh          # applies what is new, skips what is recorded
+make db-reset                 # drops the volume, recreates it, then migrates
+```
 
 ## Koyeb
 

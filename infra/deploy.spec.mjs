@@ -121,6 +121,52 @@ describe('Northflank template (infra/northflank/project.json)', () => {
       }
     }
   });
+
+  // Persistence (T-052): production must run the SQL stores, and the schema they
+  // read must exist before the services boot. A migration job does that; without
+  // it the services start against an empty database.
+  it('selects the SQL store driver', () => {
+    const group = nodesOf(northflank).find((n) => n.kind === 'SecretGroup');
+    expect(group.spec.secrets.variables.STORE_DRIVER).toBe('sql');
+  });
+
+  it('applies migrations and seeds before the services start', () => {
+    // The Project node wraps one `core` workflow that holds the addons, the
+    // secret group, the migration workflow and the services, in order.
+    const core = nodesOf(northflank).find((n) => n.kind === 'Workflow' && n.ref === 'core');
+    expect(core, 'no core workflow').toBeTruthy();
+    const steps = core.spec.steps;
+
+    const migrateIndex = steps.findIndex((n) => n.kind === 'Workflow' && n.ref === 'migrate');
+    const firstService = steps.findIndex((n) => n.kind === 'CombinedService');
+    expect(migrateIndex, 'no migrate workflow').toBeGreaterThanOrEqual(0);
+    expect(firstService, 'no service').toBeGreaterThanOrEqual(0);
+    expect(migrateIndex, 'migrations must run before the services').toBeLessThan(firstService);
+
+    const job = nodesOf(northflank).find((n) => n.kind === 'ManualJob');
+    expect(job, 'no ManualJob node').toBeTruthy();
+
+    // The migration image is built by a BuildService and the job deploys it, the
+    // same split the services use (BuildService builds, the job runs the image).
+    const builder = nodesOf(northflank).find(
+      (n) => n.kind === 'BuildService' && n.ref === 'migrate-builder',
+    );
+    expect(builder, 'no migration BuildService').toBeTruthy();
+    const dockerfile = builder.spec.buildSettings?.dockerfile?.dockerFilePath;
+    expect(dockerfile, 'migration job has no dockerfile').toBe('/db/Dockerfile');
+    expect(exists(dockerfile.replace(/^\//, '')), `${dockerfile} does not exist`).toBe(true);
+    expect(job.spec.deployment?.internal?.id).toBe('${refs.migrate-builder.id}');
+
+    // The job must actually be built and run, not just defined.
+    const kinds = nodesOf(northflank).map((n) => n.kind);
+    expect(kinds).toContain('Build');
+    expect(kinds).toContain('JobRun');
+  });
+
+  it('the migration image runs the migration script', () => {
+    const dockerfile = readFileSync(join(root, 'db', 'Dockerfile'), 'utf8');
+    expect(dockerfile).toContain('scripts/migrate.sh');
+  });
 });
 
 describe('Koyeb compose (infra/koyeb/koyeb-compose.yaml)', () => {
