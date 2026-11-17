@@ -8,7 +8,7 @@ A `credit_limits` row is the proposal for an org and carries its decision: `stat
 | identity | orgs, users, roles, permissions, role_permissions, user_roles, org_members, api_keys, elevation_requests |
 | catalog | product_lines, categories, products, variants, product_compliance, media, price_lists, price_list_items, bundles, bundle_items, merch_sections, merch_items |
 | inventory | batches, stock_levels, stock_movements, temperature_logs, recalls |
-| sales | cycles, cycle_capacity, orders, order_lines, order_events, standing_orders, standing_order_lines, reservations, quotes, subscriptions, promotions, gift_cards, reviews |
+| sales | cycles, cycle_capacity, orders, order_lines, order_events, standing_orders, standing_order_lines, reservations, quotes, subscriptions, promotions, gift_cards, reviews, pick_lists, cycle_purchase_orders |
 | accounts | trade_accounts, credit_applications, documents, bureau_reports, credit_limits, credit_events, sureties, invoices, invoice_lines, allocations, collection_actions, disputes |
 | logistics | zones, vehicles, drivers, routes, slots, route_runs, stops, deliveries, proof_of_delivery, sync_events |
 | payments | intents, payments, refunds, provider_events, settlements, settlement_lines, payouts, escrow_transactions |

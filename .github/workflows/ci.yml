@@ -53,7 +53,9 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @ag/db build
+      # Build every workspace package so the service suites resolve @ag/* types
+      # (e.g. @ag/rbac) as well as @ag/db.
+      - run: pnpm --filter "./packages/*" build
       # The @ag/db adapter integration tests need a live database (they skip when
       # DATABASE_URL is unset, so the node job does not run them). They connect
       # as the service's superuser and provision their own NOSUPERUSER role to
@@ -69,5 +71,11 @@ jobs:
       # The accounts SQL adapters (credit limits, invoices, collections) exercise
       # the real accounts schema applied above; they skip without DATABASE_URL.
       - run: pnpm --filter @ag/accounts test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      # The commerce SQL adapters (catalogue, pricing, cycles, orders) exercise
+      # the real catalog and sales schema applied above; they skip without
+      # DATABASE_URL.
+      - run: pnpm --filter @ag/commerce test
         env:
           DATABASE_URL: postgres://ag:ag@localhost:5432/ag

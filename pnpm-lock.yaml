@@ -509,9 +509,15 @@ importers:
 
   services/commerce:
     dependencies:
+      '@ag/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@ag/nest-auth':
         specifier: workspace:*
         version: link:../../packages/nest-auth
+      '@ag/nest-db':
+        specifier: workspace:*
+        version: link:../../packages/nest-db
       '@ag/observability':
         specifier: workspace:*
         version: link:../../packages/observability
