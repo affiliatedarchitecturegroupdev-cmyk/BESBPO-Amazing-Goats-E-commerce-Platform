@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { ApiError, createClient, type ApiClient, type CatalogueFilters } from '@ag/api-client';
+import { ApiError, createClient, type ApiClient, type CatalogueFilters, type ResolvedSection } from '@ag/api-client';
 import { toStorefrontItems, type StorefrontItem } from './catalog';
 import type { ServedAd } from './placements';
 
@@ -83,5 +83,19 @@ export async function loadCycle(): Promise<{ cutoffAt: string | null; orderOpen:
     return { cutoffAt: cycle.cutoffAt, orderOpen: cycle.orderOpen };
   } catch {
     return { cutoffAt: null, orderOpen: true };
+  }
+}
+
+/**
+ * The resolved merchandising sections for a page, as the gateway's BFF returns
+ * them (T-040). A failed read yields no sections, so the page falls back to the
+ * catalogue rather than erroring.
+ */
+export async function loadSections(page = 'home'): Promise<ResolvedSection[]> {
+  try {
+    const res = await gatewayClient().merchandisingPage(page);
+    return res.sections;
+  } catch {
+    return [];
   }
 }

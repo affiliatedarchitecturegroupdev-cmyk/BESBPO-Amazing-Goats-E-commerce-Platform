@@ -61,4 +61,12 @@ describe('api-client', () => {
     const { impl } = stubFetch(new Response(null, { status: 204 }));
     await expect(createClient('https://gw.example', () => ({}), impl).serveAds('A1')).resolves.toBeUndefined();
   });
+
+  it('requests the resolved merchandising page through the gateway BFF', async () => {
+    const { impl, calls } = stubFetch(jsonResponse({ view: 'public', page: 'home', sections: [] }));
+    const res = await createClient('https://gw.example', () => ({}), impl).merchandisingPage('shop');
+    expect(calls[0].url).toBe('https://gw.example/gateway/bff/merchandising?page=shop');
+    expect(res.page).toBe('home');
+  });
+
 });

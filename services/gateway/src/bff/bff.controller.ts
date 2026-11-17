@@ -1,7 +1,7 @@
-import { Controller, Get, Req } from '@nestjs/common';
+import { Controller, Get, Query, Req } from '@nestjs/common';
 import { RequirePermissions, userFromRequest } from '@ag/nest-auth';
 import { BffService, viewForRoles } from './bff.service';
-import { ViewChannel } from './upstream';
+import { ViewChannel, merchPageFrom } from './upstream';
 
 /**
  * Storefront/trade BFF. Every route is permission-gated; the catalogue view
@@ -16,6 +16,12 @@ export class BffController {
   @RequirePermissions('catalog:read')
   home(@Req() req: any) {
     return this.service.home(view(req), authorization(req));
+  }
+
+  @Get('merchandising')
+  @RequirePermissions('catalog:read')
+  merchandising(@Req() req: any, @Query() q: Record<string, unknown>) {
+    return this.service.merchandising(merchPageFrom(q.page), view(req), authorization(req));
   }
 
   @Get('catalogue')

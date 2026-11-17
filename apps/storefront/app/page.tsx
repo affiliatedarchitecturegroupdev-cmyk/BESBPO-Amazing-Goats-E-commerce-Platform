@@ -6,7 +6,8 @@ import { ServedAdSlot } from '../components/FulfilmentTag';
 import { CATEGORIES, featuredBoxes, specials, type StorefrontItem } from '../lib/catalog';
 import { adsForSlot, placeAds } from '../lib/placements';
 import { cutoffMessage, earlyWindowMessage } from '../lib/fulfilment';
-import { loadAds, loadCatalogue, loadCycle } from '../lib/gateway';
+import { toMerchSections } from '../lib/sections';
+import { loadAds, loadCatalogue, loadCycle, loadSections } from '../lib/gateway';
 
 // A live catalogue: render per request rather than at build time.
 export const dynamic = 'force-dynamic';
@@ -19,12 +20,13 @@ const OCCASIONS = [
 ];
 
 export default async function HomePage() {
-  const [{ data: items, error }, adsA1, adsA2, adsA4, cycle] = await Promise.all([
+  const [{ data: items, error }, adsA1, adsA2, adsA4, cycle, sections] = await Promise.all([
     loadCatalogue(),
     loadAds('A1'),
     loadAds('A2'),
     loadAds('A4'),
     loadCycle(),
+    loadSections('home'),
   ]);
 
   const banners = adsForSlot(adsA1.concat(adsA2), 'A1');
@@ -32,6 +34,8 @@ export default async function HomePage() {
   // A4 sponsored tiles sit among the specials, one in five, at most two.
   const specialsWithAds = placeAds(specials(items), adsA4);
   const essentials = items.filter((i) => i.category === 'eggs' || i.category === 'dairy');
+  // Curated merchandising the editor pinned to the home page (T-040).
+  const curated = toMerchSections(sections);
 
   return (
     <section>
@@ -47,6 +51,15 @@ export default async function HomePage() {
           <li key={c.slug}><Link href={`/shop/${c.slug}`}>{c.label}</Link></li>
         ))}
       </ul>
+
+      {curated.map((s) => (
+        <div key={s.code}>
+          <h2>{s.title}</h2>
+          <div className="grid">
+            {s.cards.map((c) => <ProductCard key={c.item.sku} v={c.item} />)}
+          </div>
+        </div>
+      ))}
 
       <h2>Ready-made bundles</h2>
       <div className="grid">

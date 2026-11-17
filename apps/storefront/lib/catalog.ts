@@ -27,8 +27,17 @@ export function byCategory(items: StorefrontItem[], category: string): Storefron
   return items.filter((i) => i.category === category);
 }
 
+/** The box line is `AG-BX`; the catalogue may leave `categorySlug` null, so the
+ *  line prefix is the reliable way to find the boxes. */
+export const BOX_LINE_PREFIX = 'AG-BX';
+
+export function isBoxItem(item: { sku: string }): boolean {
+  return item.sku.startsWith(BOX_LINE_PREFIX);
+}
+
 export function featuredBoxes(items: StorefrontItem[]): StorefrontItem[] {
-  return byCategory(items, 'boxes');
+  const bySlug = byCategory(items, 'boxes');
+  return bySlug.length > 0 ? bySlug : items.filter(isBoxItem);
 }
 
 export function specials(items: StorefrontItem[]): StorefrontItem[] {

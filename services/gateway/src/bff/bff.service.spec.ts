@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BffService, UpstreamError, aggregateOpenApi, viewForRoles } from './bff.service';
-import { FetchLike, Upstreams } from './upstream';
+import { FetchLike, Upstreams, coerceSections, merchPageFrom, visibleSections } from './upstream';
 
 /** A fetch stand-in that serves canned JSON per URL and records what was requested. */
 function stubFetch(routes: Record<string, unknown>, calls: string[] = []): FetchLike {
@@ -21,6 +21,19 @@ const CATALOGUE = {
     { sku: 'AG-BF-001', name: 'Beef carcass', channel: 'trade_only', fulfilment: 'quote', temperature: 'chilled', phase: 1 },
   ],
 };
+
+/** A resolved merchandising payload as the commerce service returns it. */
+const MERCH = [
+  {
+    code: 'home-hero',
+    title: 'This week',
+    page: 'home',
+    items: [
+      { sku: 'AG-EG-001', name: 'Eggs, large', pack: '30', badge: 'special', item: { sku: 'AG-EG-001', name: 'Eggs, large', pack: '30', channel: 'both', fulfilment: 'pre_order_cycle', temperature: 'ambient', phase: 1 } },
+      { sku: 'AG-BF-001', name: 'Beef carcass', pack: 'carcass', badge: null, item: { sku: 'AG-BF-001', name: 'Beef carcass', pack: 'carcass', channel: 'trade_only', fulfilment: 'quote', temperature: 'chilled', phase: 1 } },
+    ],
+  },
+];
 
 describe('viewForRoles', () => {
   it('gives trade roles the trade view and everyone else public', () => {
@@ -74,15 +87,36 @@ describe('BffService.catalogue', () => {
 });
 
 describe('BffService.home', () => {
-  it('combines the catalogue with the current cycle and computes orderOpen', async () => {
+  it('returns the curated sections, filtered to the view, with the cycle and orderOpen', async () => {
     const future = new Date(Date.now() + 3600_000).toISOString();
     const svc = new BffService(
       COMMERCE_ONLY,
-      stubFetch({ '/commerce/catalog': CATALOGUE, '/commerce/cycles/current': { cutoffAt: future, tradeLockAt: future } }),
+      stubFetch({
+        '/commerce/catalog': CATALOGUE,
+        '/commerce/cycles/current': { cutoffAt: future, tradeLockAt: future },
+        '/commerce/merchandising/page?page=home': MERCH,
+      }),
     );
     const res = await svc.home('public');
     expect(res.cycle.orderOpen).toBe(true);
-    expect(res.sections[0].items.length).toBeGreaterThan(0);
+    // The public view drops the trade-only tile but keeps the section.
+    expect(res.sections).toHaveLength(1);
+    expect(res.sections[0].code).toBe('home-hero');
+    expect(res.sections[0].items.map((i) => i.sku)).toEqual(['AG-EG-001']);
+  });
+
+  it('keeps trade-only tiles for the trade view', async () => {
+    const svc = new BffService(COMMERCE_ONLY, stubFetch({ '/commerce/catalog': CATALOGUE, '/commerce/merchandising/page?page=home': MERCH }));
+    const res = await svc.home('trade');
+    expect(res.sections[0].items.map((i) => i.sku)).toEqual(['AG-EG-001', 'AG-BF-001']);
+  });
+
+  it('falls back to one catalogue section when there is no curated merchandising', async () => {
+    const svc = new BffService(COMMERCE_ONLY, stubFetch({ '/commerce/catalog': CATALOGUE }));
+    const res = await svc.home('public');
+    expect(res.sections).toHaveLength(1);
+    expect(res.sections[0].code).toBe('catalogue');
+    expect(res.sections[0].items.map((i) => i.sku)).toEqual(['AG-EG-001', 'AG-PK-001']);
   });
 
   it('still returns the catalogue when the cycle service is down', async () => {
@@ -90,6 +124,59 @@ describe('BffService.home', () => {
     const res = await svc.home('public');
     expect(res.cycle.cutoffAt).toBeNull();
     expect(res.sections[0].items).toHaveLength(2);
+  });
+});
+
+describe('BffService.merchandising', () => {
+  it('asks commerce for the page and filters the tiles to the view', async () => {
+    const calls: string[] = [];
+    const svc = new BffService(COMMERCE_ONLY, stubFetch({ '/commerce/merchandising/page?page=category': MERCH }, calls));
+    const res = await svc.merchandising('category', 'public');
+    expect(calls[0]).toBe('http://commerce/commerce/merchandising/page?page=category');
+    expect(res.page).toBe('category');
+    expect(res.sections[0].items).toHaveLength(1);
+  });
+
+  it('is an empty list, not an error, when merchandising is unavailable', async () => {
+    const svc = new BffService(COMMERCE_ONLY, stubFetch({}));
+    const res = await svc.merchandising('home', 'public');
+    expect(res.sections).toEqual([]);
+  });
+});
+
+describe('coerceSections', () => {
+  it('reads an array or a {sections} envelope and drops a codeless section', () => {
+    expect(coerceSections(MERCH)[0].code).toBe('home-hero');
+    expect(coerceSections({ sections: MERCH })[0].code).toBe('home-hero');
+    expect(coerceSections([{ title: 'no code' }])).toEqual([]);
+  });
+
+  it('drops a tile with no usable item but keeps the section', () => {
+    const sections = coerceSections([{ code: 'x', title: 'X', page: 'home', items: [{ sku: 'a' }, MERCH[0].items[0]] }]);
+    expect(sections[0].items.map((i) => i.sku)).toEqual(['AG-EG-001']);
+  });
+
+  it('is an empty list for a malformed payload', () => {
+    expect(coerceSections(null)).toEqual([]);
+    expect(coerceSections({ nope: 1 })).toEqual([]);
+  });
+});
+
+describe('visibleSections', () => {
+  it('filters tiles by channel and drops a section left empty', () => {
+    const sections = coerceSections(MERCH);
+    expect(visibleSections(sections, 'public')[0].items).toHaveLength(1);
+    const tradeOnly = coerceSections([{ code: 't', title: 'T', page: 'home', items: [MERCH[0].items[1]] }]);
+    expect(visibleSections(tradeOnly, 'public')).toEqual([]);
+    expect(visibleSections(tradeOnly, 'trade')).toHaveLength(1);
+  });
+});
+
+describe('merchPageFrom', () => {
+  it('accepts a known page and defaults anything else to home', () => {
+    expect(merchPageFrom('shop')).toBe('shop');
+    expect(merchPageFrom('nope')).toBe('home');
+    expect(merchPageFrom(undefined)).toBe('home');
   });
 });
 
