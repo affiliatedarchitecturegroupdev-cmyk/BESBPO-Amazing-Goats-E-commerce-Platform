@@ -4,6 +4,15 @@ import { PgCatalogueStore } from './catalog/catalog.sql-store';
 import { PgPricingStore } from './pricing/pricing.sql-store';
 import { PgCycleStore } from './cycles/cycle.sql-store';
 import { PgOrderStore } from './orders/orders.sql-store';
+import { PgPromotionStore } from './promotions/promotions.sql-store';
+import { PgSubscriptionStore } from './subscriptions/subscriptions.sql-store';
+import { PgMerchandisingStore } from './merchandising/merchandising.sql-store';
+import { PgComplianceStore } from './compliance/compliance.sql-store';
+import { PgSupplierApplicationStore } from './onboarding/onboarding.sql-store';
+import type { Promotion } from './promotions/promotions.types';
+import type { StandingOrder, Subscription } from './subscriptions/subscriptions.types';
+import type { MerchSection } from './merchandising/merchandising.types';
+import type { SupplierApplication } from './onboarding/supplier-onboarding';
 import { buildOrder } from './orders/order-builder';
 import type { CycleRecord } from './cycles/cycle-engine';
 import type { CatalogueItem } from './catalog/catalog.types';
@@ -61,6 +70,15 @@ async function cleanFixtures(): Promise<void> {
   await admin!.query(`DELETE FROM catalog.price_list_items WHERE price_list_id IN
     (SELECT id FROM catalog.price_lists WHERE external_id LIKE 'it_pl_%')`);
   await admin!.query(`DELETE FROM catalog.price_lists WHERE external_id LIKE 'it_pl_%'`);
+  await admin!.query(`DELETE FROM catalog.merch_items WHERE section_id IN
+    (SELECT id FROM catalog.merch_sections WHERE code LIKE 'it-%')`);
+  await admin!.query(`DELETE FROM catalog.merch_sections WHERE code LIKE 'it-%'`);
+  await admin!.query(`DELETE FROM catalog.product_compliance WHERE variant_id IN
+    (SELECT id FROM catalog.variants WHERE sku LIKE 'IT-%')`);
+  await admin!.query(`DELETE FROM sales.promotions WHERE external_id LIKE 'it_%'`);
+  await admin!.query(`DELETE FROM sales.subscriptions WHERE external_id LIKE 'it_%'`);
+  await admin!.query(`DELETE FROM sales.standing_orders WHERE external_id LIKE 'it_%'`);
+  await admin!.query(`DELETE FROM partners.supplier_applications WHERE org_name LIKE 'IT %'`);
   await admin!.query(`DELETE FROM catalog.variants WHERE sku LIKE 'IT-%'`);
   await admin!.query(`DELETE FROM catalog.products WHERE slug LIKE 'it-%'`);
   await admin!.query(`DELETE FROM catalog.product_lines WHERE code = 'ITC'`);
@@ -138,9 +156,9 @@ describe.skipIf(!admin)('commerce SQL adapters (integration)', () => {
     await dropRole();
     await admin!.query(`CREATE ROLE ${ROLE} LOGIN PASSWORD '${PASSWORD}' NOSUPERUSER NOBYPASSRLS`);
     await admin!.query(
-      `GRANT USAGE ON SCHEMA identity, catalog, sales TO ${ROLE};
-       GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA identity, catalog, sales TO ${ROLE};
-       GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA identity, catalog, sales TO ${ROLE}`,
+      `GRANT USAGE ON SCHEMA identity, catalog, sales, partners TO ${ROLE};
+       GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA identity, catalog, sales, partners TO ${ROLE};
+       GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA identity, catalog, sales, partners TO ${ROLE}`,
     );
     await seedFixtures();
     app = new PgDb(asRole(adminUrl!, ROLE, PASSWORD));
@@ -254,6 +272,137 @@ describe.skipIf(!admin)('commerce SQL adapters (integration)', () => {
       const store = new PgOrderStore(app!);
       await runWithSession({ staff: true }, () => store.updateStatus(ORDER_B, 'confirmed'));
       expect((await runWithSession({ staff: true }, () => store.get(ORDER_B)))?.status).toBe('confirmed');
+    });
+  });
+
+  describe('PgPromotionStore', () => {
+    const draft: Promotion = {
+      id: 'it_pr_spring',
+      code: 'ITSPRING5',
+      name: 'IT spring 5%',
+      kind: 'percent',
+      percent: 5,
+      startsAt: '2026-01-01T00:00:00.000Z',
+      endsAt: null,
+      status: 'draft',
+      stackable: false,
+    };
+
+    it('round-trips a promotion and hides a draft from a non-staff session', async () => {
+      const store = new PgPromotionStore(app!);
+      await runWithSession({ staff: true }, () => store.insert(draft));
+      const read = await runWithSession({ staff: true }, () => store.get(draft.id));
+      expect(read).toMatchObject({ code: 'ITSPRING5', kind: 'percent', percent: 5, status: 'draft' });
+
+      // A draft is not public: a customer session must not see it.
+      const asCustomer = await runWithSession({ orgId: ORG_A }, () => store.get(draft.id));
+      expect(asCustomer).toBeUndefined();
+    });
+
+    it('makes an approved promotion visible to a customer', async () => {
+      const store = new PgPromotionStore(app!);
+      await runWithSession({ staff: true }, () =>
+        store.replace({ ...draft, status: 'approved', approvedBy: USER_A }),
+      );
+      const asCustomer = await runWithSession({ orgId: ORG_A }, () => store.get(draft.id));
+      expect(asCustomer?.status).toBe('approved');
+    });
+  });
+
+  describe('PgSubscriptionStore', () => {
+    const subscription: Subscription = {
+      id: 'it_sub_1',
+      customerUserId: USER_A,
+      bundleId: 'bundle_braai',
+      cadence: 'fortnightly',
+      nextRunAt: '2026-12-01T06:00:00.000Z',
+      paused: false,
+      skipped: ['2026-11-17T06:00:00.000Z'],
+    };
+
+    it('round-trips a subscription and scopes it to its customer', async () => {
+      const store = new PgSubscriptionStore(app!);
+      await runWithSession({ userId: USER_A }, () => store.saveSubscription(subscription));
+      const mine = await runWithSession({ userId: USER_A }, () => store.getSubscription(subscription.id));
+      expect(mine).toMatchObject({ cadence: 'fortnightly', customerUserId: USER_A, bundleId: 'bundle_braai' });
+      expect(mine?.skipped).toEqual(['2026-11-17T06:00:00.000Z']);
+
+      const theirs = await runWithSession({ userId: USER_B }, () => store.getSubscription(subscription.id));
+      expect(theirs).toBeUndefined();
+    });
+
+    it('round-trips a standing order with its lines', async () => {
+      const store = new PgSubscriptionStore(app!);
+      const standing: StandingOrder = {
+        id: 'it_so_1',
+        orgId: ORG_A,
+        dayOfWeek: 2,
+        deliveryWindow: '06:00-10:00',
+        pausedUntil: null,
+        active: true,
+        lines: [{ variantId: 'var_1', qty: 10 }],
+      };
+      await runWithSession({ orgId: ORG_A }, () => store.saveStandingOrder(standing));
+      const read = await runWithSession({ orgId: ORG_A }, () => store.getStandingOrder(standing.id));
+      expect(read).toMatchObject({ dayOfWeek: 2, deliveryWindow: '06:00-10:00', active: true });
+      expect(read?.lines).toEqual([{ variantId: 'var_1', qty: 10 }]);
+    });
+  });
+
+  describe('PgMerchandisingStore', () => {
+    const section: MerchSection = {
+      id: 'it_sec_1',
+      code: 'it-home-hero',
+      title: 'IT home hero',
+      page: 'home',
+      sort: 1,
+      active: true,
+      startsAt: null,
+      endsAt: null,
+    };
+
+    it('round-trips a section and its items against the catalogue', async () => {
+      const store = new PgMerchandisingStore(app!);
+      await store.saveSection(section);
+      await store.replaceItems(section.id, [{ sectionId: 'ignored', sku: SKU, sort: 3, badge: 'it-badge' }]);
+
+      expect((await store.getSection(section.id))?.title).toBe('IT home hero');
+      const items = await store.itemsForSection(section.id);
+      expect(items).toEqual([{ sectionId: section.id, sku: SKU, sort: 3, badge: 'it-badge' }]);
+
+      // Replacing wholesale leaves exactly the new set.
+      await store.replaceItems(section.id, []);
+      expect(await store.itemsForSection(section.id)).toEqual([]);
+    });
+  });
+
+  describe('PgComplianceStore', () => {
+    it('upserts a compliance row keyed by sku', async () => {
+      const store = new PgComplianceStore(app!);
+      await store.upsert({ variantSku: SKU, ruleSet: 'meat_abattoir', classOrGrade: 'A2' });
+      expect(await store.get(SKU)).toMatchObject({ ruleSet: 'meat_abattoir', classOrGrade: 'A2' });
+
+      await store.upsert({ variantSku: SKU, ruleSet: 'meat_abattoir', classOrGrade: 'A3' });
+      expect((await store.get(SKU))?.classOrGrade).toBe('A3');
+      expect((await store.all()).filter((c) => (c as { variantSku?: string }).variantSku === SKU)).toHaveLength(1);
+    });
+  });
+
+  describe('PgSupplierApplicationStore', () => {
+    it('round-trips an application and is staff-only', async () => {
+      const store = new PgSupplierApplicationStore(app!);
+      const application: SupplierApplication = {
+        orgName: 'IT Dairy Co',
+        kind: 'dairy',
+        documents: [{ kind: 'dairy_approval', reference: 'DA-1', verified: true, expiresOn: '2027-01-01' }],
+      };
+      await runWithSession({ staff: true }, () => store.upsert(application));
+      const read = await runWithSession({ staff: true }, () => store.all());
+      expect(read.find((a) => a.orgName === 'IT Dairy Co')?.documents).toEqual(application.documents);
+
+      // Onboarding is a staff workflow: a customer session sees nothing.
+      const asCustomer = await runWithSession({ orgId: ORG_A }, () => store.all());
+      expect(asCustomer).toEqual([]);
     });
   });
 });
