@@ -7,8 +7,9 @@ import type { DispatchRecord } from '../dispatch/dispatch';
 export class SmsService {
   constructor(private readonly dispatch: DispatchService) {}
 
-  list(): DispatchRecord[] {
-    return this.dispatch.list().filter((entry) => entry.channel === 'sms');
+  async list(): Promise<DispatchRecord[]> {
+    const entries = await this.dispatch.list();
+    return entries.filter((entry) => entry.channel === 'sms');
   }
 
   /** Renders the template and sends over SMS, subject to consent. */

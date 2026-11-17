@@ -15,7 +15,7 @@ export interface ConsentRecord {
 }
 
 export interface ConsentStore {
-  get(contactId: string): ConsentRecord | undefined;
+  get(contactId: string): Promise<ConsentRecord | undefined>;
 }
 
 export type TemplateKind = 'transactional' | 'marketing';
@@ -32,19 +32,19 @@ export interface ConsentDecision {
  * when the contact has opted in to that exact channel. An unknown contact is
  * never sent marketing, because consent cannot be assumed.
  */
-export function decideConsent(
+export async function decideConsent(
   store: ConsentStore,
   input: { contactId: string; channel: Channel; kind: TemplateKind },
-): ConsentDecision {
+): Promise<ConsentDecision> {
   if (input.kind === 'transactional') return { allowed: true, reason: 'transactional' };
 
-  const record = store.get(input.contactId);
+  const record = await store.get(input.contactId);
   if (!record) return { allowed: false, reason: 'unknown_contact' };
   if (record.marketing.includes(input.channel)) return { allowed: true, reason: 'opted_in' };
   return { allowed: false, reason: 'no_consent' };
 }
 
-/** In-memory consent store; the SQL adapter reads `identity.users.marketing_opt_in`. */
+/** In-memory consent store; the SQL adapter reads `notifications.consent`. */
 export class InMemoryConsentStore implements ConsentStore {
   private readonly byId = new Map<string, ConsentRecord>();
 
@@ -52,7 +52,7 @@ export class InMemoryConsentStore implements ConsentStore {
     for (const record of seed) this.byId.set(record.contactId, record);
   }
 
-  get(contactId: string): ConsentRecord | undefined {
+  async get(contactId: string): Promise<ConsentRecord | undefined> {
     return this.byId.get(contactId);
   }
 

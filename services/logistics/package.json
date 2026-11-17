@@ -12,7 +12,9 @@
     "lint": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@ag/db": "workspace:*",
     "@ag/nest-auth": "workspace:*",
+    "@ag/nest-db": "workspace:*",
     "@ag/observability": "workspace:*",
     "@ag/rbac": "workspace:*",
     "@ag/shared-types": "workspace:*",

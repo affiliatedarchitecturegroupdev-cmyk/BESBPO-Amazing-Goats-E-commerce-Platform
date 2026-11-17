@@ -53,8 +53,9 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      # Build every workspace package so the service suites resolve @ag/* types
-      # (e.g. @ag/rbac) as well as @ag/db.
+      # Build every shared package: the adapter tests below import service
+      # sources, which pull in @ag/rbac, @ag/nest-auth and @ag/observability as
+      # well as @ag/db, so building only @ag/db is not enough.
       - run: pnpm --filter "./packages/*" build
       # The @ag/db adapter integration tests need a live database (they skip when
       # DATABASE_URL is unset, so the node job does not run them). They connect
@@ -77,5 +78,29 @@ jobs:
       # the real catalog and sales schema applied above; they skip without
       # DATABASE_URL.
       - run: pnpm --filter @ag/commerce test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      # The identity, logistics and stock SQL adapters exercise their real
+      # schemas (including the id bridges in migration 0016); they skip without
+      # DATABASE_URL.
+      - run: pnpm --filter @ag/identity test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      - run: pnpm --filter @ag/logistics test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      - run: pnpm --filter @ag/stock test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      # The ads, partners and notifications SQL adapters exercise the ads,
+      # partners and notifications schemas (including migration 0017); they skip
+      # without DATABASE_URL.
+      - run: pnpm --filter @ag/ads test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      - run: pnpm --filter @ag/partners test
+        env:
+          DATABASE_URL: postgres://ag:ag@localhost:5432/ag
+      - run: pnpm --filter @ag/notifications test
         env:
           DATABASE_URL: postgres://ag:ag@localhost:5432/ag

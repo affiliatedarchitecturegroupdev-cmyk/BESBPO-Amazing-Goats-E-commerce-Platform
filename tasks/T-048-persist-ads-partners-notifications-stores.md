@@ -10,10 +10,10 @@ files: ["services/ads/src/**", "services/partners/src/**", "services/notificatio
 Swap the in-memory stores in ads, partners and notifications for SQL adapters.
 
 ## Acceptance
-- [ ] `Pg*Store` over `ads.*`, `partners.*` and the notification dispatch/consent tables
-- [ ] `*.sql-store.integration.spec.ts` per service proving round-trips and RLS scoping
-- [ ] Existing suites stay green with and without `DATABASE_URL`
-- [ ] Tests added and passing
+- [x] `Pg*Store` over `ads.*`, `partners.*` and the notification dispatch/consent tables
+- [x] `*.sql-store.integration.spec.ts` per service proving round-trips and RLS scoping
+- [x] Existing suites stay green with and without `DATABASE_URL`
+- [x] Tests added and passing
 
 ## Notes
 Same pattern as T-046. Notifications keep the pure template renderer; only the store changes.

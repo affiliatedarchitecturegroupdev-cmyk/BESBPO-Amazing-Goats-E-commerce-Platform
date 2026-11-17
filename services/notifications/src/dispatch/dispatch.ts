@@ -34,20 +34,20 @@ export interface DispatchRecord {
 }
 
 export interface DispatchLog {
-  record(entry: DispatchRecord): DispatchRecord;
-  list(): DispatchRecord[];
+  record(entry: DispatchRecord): Promise<DispatchRecord>;
+  list(): Promise<DispatchRecord[]>;
 }
 
-/** In-memory dispatch log; the SQL adapter writes a `notifications.messages` table. */
+/** In-memory dispatch log; the SQL adapter writes `notifications.messages`. */
 export class InMemoryDispatchLog implements DispatchLog {
   private readonly entries: DispatchRecord[] = [];
 
-  record(entry: DispatchRecord): DispatchRecord {
+  async record(entry: DispatchRecord): Promise<DispatchRecord> {
     this.entries.push(entry);
     return entry;
   }
 
-  list(): DispatchRecord[] {
+  async list(): Promise<DispatchRecord[]> {
     return [...this.entries];
   }
 }
