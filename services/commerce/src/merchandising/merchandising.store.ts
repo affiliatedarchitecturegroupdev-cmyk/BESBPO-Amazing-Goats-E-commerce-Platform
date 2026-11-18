@@ -1,6 +1,6 @@
 import { MerchItem, MerchSection } from './merchandising.types';
 
-/** Persistence boundary for merchandising; the SQL adapter over catalog.merch_sections/items lands with the store swap. */
+/** Persistence boundary for merchandising; the SQL adapter over `catalog.merch_sections`/`merch_items` is `PgMerchandisingStore`. */
 export interface MerchandisingStore {
   sections(): Promise<MerchSection[]>;
   getSection(id: string): Promise<MerchSection | undefined>;
