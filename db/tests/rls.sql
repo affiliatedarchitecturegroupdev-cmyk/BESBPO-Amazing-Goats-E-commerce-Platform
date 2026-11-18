@@ -19,6 +19,9 @@ DROP ROLE IF EXISTS ag_rls_test;
 CREATE ROLE ag_rls_test LOGIN PASSWORD 'test' NOSUPERUSER NOBYPASSRLS;
 GRANT USAGE ON SCHEMA sales, accounts, ads, identity, catalog, notifications TO ag_rls_test;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA sales, accounts, ads, identity, catalog, notifications TO ag_rls_test;
+-- Serial keys (catalog.merch_sections.id) draw from a sequence, so an INSERT
+-- needs USAGE on it; the application role needs the same grant (db/README.md).
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA sales, accounts, ads, identity, catalog, notifications TO ag_rls_test;
 
 -- Minimal catalogue row so order lines have a variant to reference.
 INSERT INTO catalog.product_lines (code, name, grp, phase) VALUES ('RLS', 'RLS line', 'test', 1);
@@ -57,6 +60,18 @@ INSERT INTO notifications.messages (id, channel, template_key, contact_ref, stat
 INSERT INTO notifications.consent (contact_ref, marketing) VALUES
   ('rls-a', ARRAY['email']::text[]),
   ('rls-b', ARRAY['sms']::text[]);
+
+-- Merchandising sections are editorial content: the public sees the active,
+-- in-window ones, and only staff may write (migration 0018). Inserted here as the
+-- superuser (RLS bypassed, as for every other fixture), then read under the app
+-- role below.
+INSERT INTO catalog.merch_sections (code, title, page, sort, active, starts_at, ends_at) VALUES
+  ('RLS-MERCH-LIVE', 'RLS live', 'home', 0, true, NULL, NULL),
+  ('RLS-MERCH-DRAFT', 'RLS draft', 'home', 1, false, NULL, NULL),
+  ('RLS-MERCH-EXPIRED', 'RLS expired', 'home', 2, true, now() - interval '2 days', now() - interval '1 day');
+INSERT INTO catalog.merch_items (section_id, variant_id, sort) VALUES
+  ((SELECT id FROM catalog.merch_sections WHERE code = 'RLS-MERCH-LIVE'), '00000000-0000-0000-0000-00000000a001', 0),
+  ((SELECT id FROM catalog.merch_sections WHERE code = 'RLS-MERCH-DRAFT'), '00000000-0000-0000-0000-00000000a001', 0);
 
 CREATE FUNCTION pg_temp.assert_eq(actual bigint, expected bigint, label text) RETURNS void AS $$
 BEGIN
@@ -111,6 +126,33 @@ SAVEPOINT s;
   SET LOCAL app.user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   SELECT pg_temp.assert_eq((SELECT count(*) FROM sales.orders), 1, 'orders user A sees own');
   SELECT pg_temp.assert_eq((SELECT count(*) FROM sales.orders WHERE customer_user_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'), 0, 'orders user A cannot see B');
+ROLLBACK TO SAVEPOINT s;
+
+-- Merchandising sections are editorial content: the public sees the active,
+-- in-window ones, and only staff may write (migration 0018). The fixtures were
+-- inserted above; here the app role reads them.
+--
+-- The public (no staff setting) sees only the live strip and its items.
+SAVEPOINT s;
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.merch_sections WHERE code LIKE 'RLS-MERCH-%'), 1,
+    'merch sections: public sees only the live strip');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.merch_items), 1,
+    'merch items: public sees only the live strip''s items');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.merch_items i
+       JOIN catalog.merch_sections s ON s.id = i.section_id
+      WHERE s.code = 'RLS-MERCH-DRAFT'), 0,
+    'merch items: a draft strip''s items stay hidden');
+ROLLBACK TO SAVEPOINT s;
+
+-- Staff see every section, including drafts and expired strips.
+SAVEPOINT s;
+  SET LOCAL app.staff = 'on';
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.merch_sections WHERE code LIKE 'RLS-MERCH-%'), 3,
+    'merch sections: staff sees all');
 ROLLBACK TO SAVEPOINT s;
 
 -- Children inherit the parent's visibility.
