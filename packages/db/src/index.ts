@@ -3,3 +3,4 @@ export * from './session-context';
 export * from './db';
 export * from './store-driver';
 export * from './rows';
+export * from './field-cipher';
