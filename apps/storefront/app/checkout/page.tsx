@@ -5,6 +5,14 @@ import { cartSession } from '../../lib/cart-session';
 import { paymentOptions, totalWithDiscount, TRADE_NOTE } from '../../lib/payments';
 import { formatRand } from '../../lib/format';
 import { placeOrder } from './actions';
+import { pageMetadata } from '../../lib/seo';
+
+export const metadata = pageMetadata({
+  title: 'Checkout',
+  description: 'Check out your Amazing Goats order.',
+  path: '/checkout',
+  noindex: true,
+});
 
 // The checkout reads the cart cookie and posts through a server action.
 export const dynamic = 'force-dynamic';
