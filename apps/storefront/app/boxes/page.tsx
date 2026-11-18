@@ -5,6 +5,13 @@ import { CutoffBanner } from '../../components/CutoffBanner';
 import { cutoffMessage } from '../../lib/fulfilment';
 import { isBoxItem } from '../../lib/catalog';
 import { loadCatalogue } from '../../lib/gateway';
+import { pageMetadata } from '../../lib/seo';
+
+export const metadata = pageMetadata({
+  title: 'Boxes',
+  description: 'Ready-made boxes of lamb, chicken and more, cut and packed to order on the weekly cycle.',
+  path: '/boxes',
+});
 
 // The box line is live, so render per request.
 export const dynamic = 'force-dynamic';

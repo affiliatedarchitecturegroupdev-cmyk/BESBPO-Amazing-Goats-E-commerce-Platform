@@ -8,6 +8,14 @@ import { cartSession } from '../../lib/cart-session';
 import { updateCartQty, removeFromCart } from '../../lib/cart-actions';
 import { formatRand } from '../../lib/format';
 import { loadCatalogue } from '../../lib/gateway';
+import { pageMetadata } from '../../lib/seo';
+
+export const metadata = pageMetadata({
+  title: 'Cart',
+  description: 'Your Amazing Goats cart.',
+  path: '/cart',
+  noindex: true,
+});
 
 // The cart cookie and cross-sell catalogue are read per request.
 export const dynamic = 'force-dynamic';

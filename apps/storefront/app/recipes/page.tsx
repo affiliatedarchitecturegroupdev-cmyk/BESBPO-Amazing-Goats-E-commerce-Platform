@@ -1,3 +1,10 @@
+import { pageMetadata } from '../../lib/seo';
+
+export const metadata = pageMetadata({
+  title: 'Recipes',
+  description: 'Recipes for braai, potjie and slow-roast lamb, and how to get the most from every cut.',
+  path: '/recipes',
+});
 // Wireframe: docs/wireframes/index.html#sf-recipes
 export default function RecipesPage() {
   return (

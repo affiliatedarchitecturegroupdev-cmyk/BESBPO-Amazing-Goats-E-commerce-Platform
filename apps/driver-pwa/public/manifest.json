@@ -1,9 +1,13 @@
 {
   "name": "Amazing Goats Driver",
   "short_name": "AG Driver",
+  "description": "Offline-first day pack, proof of delivery and sync for Amazing Goats drivers.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#F4ECD8",
   "theme_color": "#1F3B2D",
+  "lang": "en-ZA",
   "icons": []
 }

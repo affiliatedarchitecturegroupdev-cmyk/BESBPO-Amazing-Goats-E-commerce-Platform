@@ -1,5 +1,6 @@
 // Wireframe: docs/wireframes/index.html#sf-merch
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ProductCard } from '../../../components/ProductCard';
 import { ServedAdSlot } from '../../../components/FulfilmentTag';
@@ -9,9 +10,28 @@ import { adsForSlot } from '../../../lib/placements';
 import { getOccasion, bundlesFor } from '../../../lib/occasions';
 import { toMerchSections } from '../../../lib/sections';
 import { loadAds, loadCatalogue, loadSections } from '../../../lib/gateway';
+import { pageMetadata } from '../../../lib/seo';
 
 // The catalogue and the curated sections are live, so render per request.
 export const dynamic = 'force-dynamic';
+
+/** Per-occasion metadata (T-064): the hub's label and blurb, when the slug is known. */
+export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+  const occasion = getOccasion(params.slug);
+  if (!occasion) {
+    return pageMetadata({
+      title: 'Occasion not found',
+      description: 'This occasion hub is no longer available.',
+      path: `/occasions/${params.slug}`,
+      noindex: true,
+    });
+  }
+  return pageMetadata({
+    title: occasion.label,
+    description: occasion.blurb,
+    path: `/occasions/${params.slug}`,
+  });
+}
 
 export default async function OccasionPage({ params }: { params: { slug: string } }) {
   const occasion = getOccasion(params.slug);

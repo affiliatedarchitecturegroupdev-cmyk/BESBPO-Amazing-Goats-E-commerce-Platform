@@ -1,5 +1,6 @@
 // Wireframe: docs/wireframes/index.html#sf-category
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { CutoffBanner } from '../../../components/CutoffBanner';
 import { ProductCard } from '../../../components/ProductCard';
 import { ServedAdSlot } from '../../../components/FulfilmentTag';
@@ -7,9 +8,21 @@ import { CATEGORIES, type StorefrontItem } from '../../../lib/catalog';
 import { adsForSlot, placeAds } from '../../../lib/placements';
 import { cutoffMessage } from '../../../lib/fulfilment';
 import { loadAds, loadCatalogue } from '../../../lib/gateway';
+import { pageMetadata } from '../../../lib/seo';
 
 // The catalogue is live, so the page renders per request.
 export const dynamic = 'force-dynamic';
+
+/** Per-category metadata (T-064): the label and a description built from it. */
+export function generateMetadata({ params }: { params: { category: string } }): Metadata {
+  const category = CATEGORIES.find((c) => c.slug === params.category);
+  const label = category?.label ?? params.category;
+  return pageMetadata({
+    title: label,
+    description: `Shop ${label.toLowerCase()} from Amazing Goats — farm-direct, ordered on the weekly cycle and delivered across KwaZulu-Natal.`,
+    path: `/shop/${params.category}`,
+  });
+}
 
 const FILTERS = ['All cuts', 'Boxes', 'Braai', 'Potjie', 'Halaal', 'Pack size'];
 

@@ -1,3 +1,10 @@
+import { pageMetadata } from '../../lib/seo';
+
+export const metadata = pageMetadata({
+  title: 'Delivery',
+  description: 'How Amazing Goats delivers: the weekly cycle, delivery zones and cold-chain handling across KwaZulu-Natal.',
+  path: '/delivery',
+});
 // Wireframe: docs/wireframes/index.html#sf-delivery
 export default function DeliveryPage() {
   return (

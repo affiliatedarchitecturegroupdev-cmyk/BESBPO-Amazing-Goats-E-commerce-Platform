@@ -1,3 +1,11 @@
+import { pageMetadata } from '../../lib/seo';
+
+export const metadata = pageMetadata({
+  title: 'Account',
+  description: 'Your Amazing Goats account.',
+  path: '/account',
+  noindex: true,
+});
 // Wireframe: docs/wireframes/index.html#sf-account
 export default function AccountPage() {
   return (

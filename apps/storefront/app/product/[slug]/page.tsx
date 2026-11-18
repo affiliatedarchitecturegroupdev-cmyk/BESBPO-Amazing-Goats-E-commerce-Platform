@@ -1,5 +1,6 @@
 // Wireframe: docs/wireframes/index.html#sf-product
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { CutoffBanner } from '../../../components/CutoffBanner';
 import { AddToCartButton } from '../../../components/AddToCartButton';
@@ -9,11 +10,31 @@ import { formatRand } from '../../../lib/format';
 import { badgesFor } from '../../../lib/catalog';
 import { cutoffMessage } from '../../../lib/fulfilment';
 import { loadCatalogue } from '../../../lib/gateway';
+import { pageMetadata } from '../../../lib/seo';
 
 // The catalogue is live, so the page renders per request.
 export const dynamic = 'force-dynamic';
 
 const SLOTS = ['Wed 15 Nov', 'Thu 16 Nov', 'Next week'];
+
+/** Per-product metadata (T-064): the product name and pack, when the item is found. */
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const { data: items } = await loadCatalogue();
+  const v = items.find((i) => i.id === params.slug || i.sku === params.slug);
+  if (!v) {
+    return pageMetadata({
+      title: 'Product not found',
+      description: 'This product is no longer available.',
+      path: `/product/${params.slug}`,
+      noindex: true,
+    });
+  }
+  return pageMetadata({
+    title: v.name,
+    description: `${v.name} (${v.pack}) from Amazing Goats — farm-direct and delivered on the weekly cycle.`,
+    path: `/product/${params.slug}`,
+  });
+}
 
 export default async function ProductSlugPage({ params }: { params: { slug: string } }) {
   const { data: items } = await loadCatalogue();

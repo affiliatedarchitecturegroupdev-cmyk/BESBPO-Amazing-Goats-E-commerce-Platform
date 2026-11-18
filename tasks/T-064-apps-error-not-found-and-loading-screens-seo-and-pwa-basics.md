@@ -13,13 +13,13 @@ has no `sitemap.ts`, `robots.ts` or favicon, so search engines and link previews
 have nothing to work with.
 
 ## Acceptance
-- [ ] `not-found.tsx` and `error.tsx` in every app, styled with the brand and offering a route back
-- [ ] `loading.tsx` for the storefront's dynamic routes (catalogue, product, search, checkout)
-- [ ] A `global-error.tsx` in the storefront that still renders the shell
-- [ ] `sitemap.ts` and `robots.ts` in the storefront, listing the public routes
-- [ ] Favicon, `icon` and an `opengraph-image` for the storefront, plus `manifest.json` and an installable PWA shell for the storefront (the driver PWA already ships one)
-- [ ] Per-page `metadata` on the storefront's public routes
-- [ ] Tests added and passing
+- [x] `not-found.tsx` and `error.tsx` in every app, styled with the brand and offering a route back
+- [x] `loading.tsx` for the storefront's dynamic routes (catalogue, product, search, checkout)
+- [x] A `global-error.tsx` in the storefront that still renders the shell
+- [x] `sitemap.ts` and `robots.ts` in the storefront, listing the public routes
+- [x] Favicon, `icon` and an `opengraph-image` for the storefront, plus `manifest.json` and an installable PWA shell for the storefront (the driver PWA already ships one)
+- [x] Per-page `metadata` on the storefront's public routes
+- [x] Tests added and passing
 
 ## Notes
 Small, self-contained and unblocks trust and SEO. The `app/health/route.ts`

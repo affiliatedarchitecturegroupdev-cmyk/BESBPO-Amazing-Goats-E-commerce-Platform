@@ -8,6 +8,14 @@ import { adsForSlot, placeAds } from '../lib/placements';
 import { cutoffMessage, earlyWindowMessage } from '../lib/fulfilment';
 import { toMerchSections } from '../lib/sections';
 import { loadAds, loadCatalogue, loadCycle, loadSections } from '../lib/gateway';
+import { pageMetadata } from '../lib/seo';
+
+export const metadata = pageMetadata({
+  title: 'Farm-direct lamb, chicken, eggs and dairy',
+  description:
+    'Shop the Amazing Goats range: lamb, chicken, eggs, dairy and produce, ordered on the weekly cycle and delivered across KwaZulu-Natal.',
+  path: '/',
+});
 
 // A live catalogue: render per request rather than at build time.
 export const dynamic = 'force-dynamic';
