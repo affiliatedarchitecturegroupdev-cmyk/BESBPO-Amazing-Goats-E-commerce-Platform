@@ -19,7 +19,7 @@ export function clientIp(req: any): string | undefined {
 @Injectable()
 export class RateLimitGuard implements CanActivate {
   constructor(
-    @Optional() private readonly limiter?: RateLimitService,
+    @Optional() @Inject(RateLimitService) private readonly limiter?: RateLimitService,
     @Optional() @Inject(AUTH_OPTIONS) private readonly options: AuthOptions = {},
   ) {}
 
