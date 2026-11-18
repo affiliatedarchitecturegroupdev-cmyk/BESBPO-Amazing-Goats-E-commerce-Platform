@@ -1,5 +1,5 @@
 # Backlog
-Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 monetise and scale.
+Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 monetise and scale, 4 range and storefront depth, 5 launch readiness.
 
 | ID | Title | Phase | Agent | Gate |
 |---|---|---|---|---|
@@ -58,3 +58,13 @@ Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 
 | T-055 | Storefront: discovery and content pages | 4 | frontend | none |
 | T-056 | Storefront: account, tracking and trade entry | 4 | frontend | none |
 | T-057 | Storefront: design system, fonts, imagery and responsive shell | 4 | frontend | none |
+| T-058 | Identity and gateway: sign-in front door (OIDC and session) | 5 | backend | gate:rbac |
+| T-059 | Apps: sign-in screens, session guard and role-aware navigation | 5 | frontend | none |
+| T-060 | Storefront: legal, POPIA and consumer information pages | 5 | frontend | gate:legal |
+| T-061 | Gateway: reverse proxy for /commerce, /ads and /accounts | 5 | backend | gate:infra |
+| T-062 | Commerce: persist the merchandising store (SQL adapter) | 5 | backend | gate:db |
+| T-063 | Identity: persist MFA enrolments (SQL adapter) | 5 | backend | gate:db |
+| T-064 | Apps: error, not-found and loading screens; SEO and PWA basics | 5 | frontend | none |
+| T-065 | Logistics: implement proof of delivery (read, capture, temperature) | 5 | backend | none |
+| T-066 | Driver PWA: IndexedDB offline queue and day-close | 5 | frontend | none |
+| T-067 | Infra: deploy the remaining front ends (trade, admin, driver, advertiser, partner) | 5 | devops | gate:infra |
