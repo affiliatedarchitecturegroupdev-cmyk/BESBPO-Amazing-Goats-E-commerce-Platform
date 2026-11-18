@@ -4,11 +4,15 @@ import { PermissionsGuard, AuditInterceptor, AUTH_OPTIONS, authOptionsFromEnv } 
 import { HealthController } from './health/health.controller';
 import { AuthModule } from './auth/auth.module';
 import { BffModule } from './bff/bff.module';
+import { ProxyModule } from './proxy/proxy.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { RateLimitGuard } from './rate-limit/rate-limit.guard';
 
 @Module({
-  imports: [AuthModule, BffModule, RateLimitModule],
+  // ProxyModule is imported last: its catch-all controller is registered after
+  // every route the gateway serves itself, so a `/gateway/*` or `/health`
+  // request never reaches the proxy.
+  imports: [AuthModule, BffModule, RateLimitModule, ProxyModule],
   controllers: [HealthController],
   providers: [
     { provide: AUTH_OPTIONS, useFactory: () => authOptionsFromEnv() },

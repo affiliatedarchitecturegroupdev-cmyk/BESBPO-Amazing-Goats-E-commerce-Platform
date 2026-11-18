@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { PROXY_PREFIXES, type ProxyPrefix } from '../proxy/proxy.routes';
 import {
   BffMerchPage,
   BffCatalogueItem,
@@ -140,7 +141,10 @@ export class BffService {
         }
       }),
     );
-    return aggregateOpenApi(docs.filter((d) => d.doc !== null) as { name: string; doc: unknown }[]);
+    return aggregateOpenApi(
+      docs.filter((d) => d.doc !== null) as { name: string; doc: unknown }[],
+      PROXY_PREFIXES.filter((p) => Boolean(this.upstreams[p.upstream])),
+    );
   }
 }
 
@@ -155,7 +159,10 @@ export function fallbackSection(items: BffCatalogueItem[]): ResolvedSectionView 
 }
 
 /** Combine per-service documents: union of paths, namespaced schemas, one tag per service. */
-export function aggregateOpenApi(services: { name: string; doc: unknown }[]): Record<string, unknown> {
+export function aggregateOpenApi(
+  services: { name: string; doc: unknown }[],
+  prefixes: readonly ProxyPrefix[] = [],
+): Record<string, unknown> {
   const paths: Record<string, unknown> = {};
   const schemas: Record<string, unknown> = {};
   const tags: { name: string; description?: string }[] = [];
@@ -174,6 +181,19 @@ export function aggregateOpenApi(services: { name: string; doc: unknown }[]): Re
     for (const [schema, def] of Object.entries(d.components?.schemas ?? {})) {
       schemas[schema in schemas ? `${name}_${schema}` : schema] = def;
     }
+  }
+
+  // The gateway proxies these prefixes, so its document advertises them even
+  // when a service has no document of its own to contribute.
+  for (const { prefix, upstream } of prefixes) {
+    paths[`${prefix}/*`] ??= {
+      get: {
+        tags: [upstream],
+        summary: `Proxy to the ${upstream} service`,
+        description: `Forwarded to the ${upstream} service; its own auth and row-level security apply.`,
+        responses: { 200: { description: 'Proxied response from the owning service' } },
+      },
+    };
   }
 
   return {

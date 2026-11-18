@@ -4,10 +4,23 @@ import type { Channel, FulfilmentType, Phase, Temperature, Variant } from '@ag/s
 export type ViewChannel = 'public' | 'trade';
 
 /** Minimal transport the gateway needs; the real one wraps global fetch. */
+export type FetchResponseLike = {
+  ok: boolean;
+  status: number;
+  headers?: unknown;
+  text?: () => Promise<string>;
+  json: () => Promise<unknown>;
+};
+
 export type FetchLike = (
   url: string,
-  init?: { headers?: Record<string, string>; signal?: AbortSignal },
-) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>;
+  init?: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string | Uint8Array;
+    signal?: AbortSignal;
+  },
+) => Promise<FetchResponseLike>;
 
 export interface Upstreams {
   commerce: string;
@@ -19,6 +32,7 @@ export interface Upstreams {
   ads?: string;
   partners?: string;
   identity?: string;
+  analytics?: string;
 }
 
 const DEFAULTS: Upstreams = {
@@ -31,12 +45,13 @@ const DEFAULTS: Upstreams = {
   ads: 'http://localhost:3007',
   partners: 'http://localhost:3008',
   identity: 'http://localhost:3009',
+  analytics: 'http://localhost:8000',
 };
 
 /** Upstream base URLs from `<NAME>_URL` env vars, falling back to local ports. */
 export function readUpstreamsFromEnv(env: NodeJS.ProcessEnv = process.env): Upstreams {
   const out: Upstreams = { commerce: env.COMMERCE_URL || DEFAULTS.commerce };
-  for (const name of ['stock', 'accounts', 'logistics', 'payments', 'notifications', 'ads', 'partners', 'identity'] as const) {
+  for (const name of ['stock', 'accounts', 'logistics', 'payments', 'notifications', 'ads', 'partners', 'identity', 'analytics'] as const) {
     const key = `${name.toUpperCase()}_URL` as keyof NodeJS.ProcessEnv;
     out[name] = env[key] || DEFAULTS[name];
   }

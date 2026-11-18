@@ -194,6 +194,30 @@ describe('aggregateOpenApi', () => {
   it('skips a service whose document is unavailable', async () => {
     const svc = new BffService(COMMERCE_ONLY, stubFetch({ '/openapi.json': { paths: { '/catalog': {} } } }));
     const doc = await svc.openapi();
-    expect(Object.keys(doc.paths as object)).toEqual(['/catalog']);
+    // The documented path, plus the proxy prefixes for the configured upstreams
+    // (only `commerce` here), so the gateway advertises what it can forward.
+    expect(Object.keys(doc.paths as object).sort()).toEqual(['/catalog', '/commerce/*']);
+  });
+
+  it('advertises the proxied prefixes even when a service has no document', async () => {
+    const merged = aggregateOpenApi(
+      [],
+      [
+        { prefix: '/commerce', upstream: 'commerce' },
+        { prefix: '/accounts', upstream: 'accounts' },
+      ],
+    );
+    expect(Object.keys(merged.paths as object).sort()).toEqual(['/accounts/*', '/commerce/*']);
+    expect((merged.paths as Record<string, { get: { tags: string[] } }>)['/commerce/*'].get.tags).toEqual([
+      'commerce',
+    ]);
+  });
+
+  it('does not overwrite a real path a service already documents', async () => {
+    const merged = aggregateOpenApi(
+      [{ name: 'commerce', doc: { paths: { '/commerce/*': { get: { summary: 'real' } } } } }],
+      [{ prefix: '/commerce', upstream: 'commerce' }],
+    );
+    expect((merged.paths as Record<string, { get: { summary: string } }>)['/commerce/*'].get.summary).toBe('real');
   });
 });
