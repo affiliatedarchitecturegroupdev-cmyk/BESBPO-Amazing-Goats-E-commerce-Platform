@@ -73,6 +73,13 @@ INSERT INTO catalog.merch_items (section_id, variant_id, sort) VALUES
   ((SELECT id FROM catalog.merch_sections WHERE code = 'RLS-MERCH-LIVE'), '00000000-0000-0000-0000-00000000a001', 0),
   ((SELECT id FROM catalog.merch_sections WHERE code = 'RLS-MERCH-DRAFT'), '00000000-0000-0000-0000-00000000a001', 0);
 
+-- MFA enrolments are a credential per subject (migration 0019). The secret is
+-- stored encrypted and a subject reads only their own row. `subject_ref` is the
+-- domain id: the same value the gateway sets as `app.user_id`.
+INSERT INTO identity.mfa_enrolments (subject_ref, secret_encrypted, confirmed_at) VALUES
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'v1:rls-a:tag:body', now()),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'v1:rls-b:tag:body', NULL);
+
 CREATE FUNCTION pg_temp.assert_eq(actual bigint, expected bigint, label text) RETURNS void AS $$
 BEGIN
   IF actual IS DISTINCT FROM expected THEN
@@ -90,6 +97,7 @@ SELECT pg_temp.assert_eq((SELECT count(*) FROM accounts.invoices), 0, 'invoices 
 SELECT pg_temp.assert_eq((SELECT count(*) FROM ads.campaigns), 0, 'campaigns default deny');
 SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.messages), 0, 'messages default deny');
 SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.consent), 0, 'consent default deny');
+SELECT pg_temp.assert_eq((SELECT count(*) FROM identity.mfa_enrolments), 0, 'mfa default deny');
 
 -- Staff bypass. Savepoints (not COMMIT) keep everything inside the outer
 -- transaction so the final ROLLBACK undoes the whole test.
@@ -100,6 +108,7 @@ SAVEPOINT s;
   SELECT pg_temp.assert_eq((SELECT count(*) FROM ads.campaigns), 2, 'campaigns staff sees all');
   SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.messages), 2, 'messages staff sees all');
   SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.consent), 2, 'consent staff sees all');
+  SELECT pg_temp.assert_eq((SELECT count(*) FROM identity.mfa_enrolments), 2, 'mfa staff sees all');
 ROLLBACK TO SAVEPOINT s;
 
 -- Org A sees only its own rows.
@@ -126,6 +135,15 @@ SAVEPOINT s;
   SET LOCAL app.user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   SELECT pg_temp.assert_eq((SELECT count(*) FROM sales.orders), 1, 'orders user A sees own');
   SELECT pg_temp.assert_eq((SELECT count(*) FROM sales.orders WHERE customer_user_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'), 0, 'orders user A cannot see B');
+ROLLBACK TO SAVEPOINT s;
+
+-- A subject sees only their own MFA enrolment (migration 0019); staff see all.
+SAVEPOINT s;
+  SET LOCAL app.user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  SELECT pg_temp.assert_eq((SELECT count(*) FROM identity.mfa_enrolments), 1, 'mfa user A sees own');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM identity.mfa_enrolments WHERE subject_ref = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'), 0,
+    'mfa user A cannot see B');
 ROLLBACK TO SAVEPOINT s;
 
 -- Merchandising sections are editorial content: the public sees the active,
