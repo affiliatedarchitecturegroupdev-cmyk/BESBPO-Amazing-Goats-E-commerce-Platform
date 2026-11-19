@@ -17,11 +17,11 @@ BEGIN;
 -- A stand-in for the application role.
 DROP ROLE IF EXISTS ag_rls_test;
 CREATE ROLE ag_rls_test LOGIN PASSWORD 'test' NOSUPERUSER NOBYPASSRLS;
-GRANT USAGE ON SCHEMA sales, accounts, ads, identity, catalog, notifications TO ag_rls_test;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA sales, accounts, ads, identity, catalog, notifications TO ag_rls_test;
+GRANT USAGE ON SCHEMA sales, accounts, ads, identity, catalog, notifications, logistics TO ag_rls_test;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA sales, accounts, ads, identity, catalog, notifications, logistics TO ag_rls_test;
 -- Serial keys (catalog.merch_sections.id) draw from a sequence, so an INSERT
 -- needs USAGE on it; the application role needs the same grant (db/README.md).
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA sales, accounts, ads, identity, catalog, notifications TO ag_rls_test;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA sales, accounts, ads, identity, catalog, notifications, logistics TO ag_rls_test;
 
 -- Minimal catalogue row so order lines have a variant to reference.
 INSERT INTO catalog.product_lines (code, name, grp, phase) VALUES ('RLS', 'RLS line', 'test', 1);
@@ -80,6 +80,15 @@ INSERT INTO identity.mfa_enrolments (subject_ref, secret_encrypted, confirmed_at
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'v1:rls-a:tag:body', now()),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'v1:rls-b:tag:body', NULL);
 
+-- Proof of delivery (migration 0020). The driver app keys a proof by the stop,
+-- which it derives from the order, so the stop ref is the order's domain id. A
+-- customer must see the proof of their own delivery and no other.
+UPDATE sales.orders SET external_id = 'rls-order-a' WHERE id = '0a000000-0000-0000-0000-000000000001';
+UPDATE sales.orders SET external_id = 'rls-order-b' WHERE id = '0b000000-0000-0000-0000-000000000002';
+INSERT INTO logistics.proof_of_delivery (stop_ref, signature_url, temperature_c, temperature_excursion, captured_at) VALUES
+  ('rls-order-a', 'T. Dlamini', 3.4, false, now()),
+  ('rls-order-b', 'N. Mokoena', 9.2, true, now());
+
 CREATE FUNCTION pg_temp.assert_eq(actual bigint, expected bigint, label text) RETURNS void AS $$
 BEGIN
   IF actual IS DISTINCT FROM expected THEN
@@ -98,6 +107,7 @@ SELECT pg_temp.assert_eq((SELECT count(*) FROM ads.campaigns), 0, 'campaigns def
 SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.messages), 0, 'messages default deny');
 SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.consent), 0, 'consent default deny');
 SELECT pg_temp.assert_eq((SELECT count(*) FROM identity.mfa_enrolments), 0, 'mfa default deny');
+SELECT pg_temp.assert_eq((SELECT count(*) FROM logistics.proof_of_delivery), 0, 'proof default deny');
 
 -- Staff bypass. Savepoints (not COMMIT) keep everything inside the outer
 -- transaction so the final ROLLBACK undoes the whole test.
@@ -109,6 +119,7 @@ SAVEPOINT s;
   SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.messages), 2, 'messages staff sees all');
   SELECT pg_temp.assert_eq((SELECT count(*) FROM notifications.consent), 2, 'consent staff sees all');
   SELECT pg_temp.assert_eq((SELECT count(*) FROM identity.mfa_enrolments), 2, 'mfa staff sees all');
+  SELECT pg_temp.assert_eq((SELECT count(*) FROM logistics.proof_of_delivery), 2, 'proof staff sees all');
 ROLLBACK TO SAVEPOINT s;
 
 -- Org A sees only its own rows.
@@ -144,6 +155,22 @@ SAVEPOINT s;
   SELECT pg_temp.assert_eq(
     (SELECT count(*) FROM identity.mfa_enrolments WHERE subject_ref = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'), 0,
     'mfa user A cannot see B');
+ROLLBACK TO SAVEPOINT s;
+
+-- A customer sees the proof of their own delivery, and no other (migration 0020).
+SAVEPOINT s;
+  SET LOCAL app.user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  SELECT pg_temp.assert_eq((SELECT count(*) FROM logistics.proof_of_delivery), 1, 'proof user A sees own');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM logistics.proof_of_delivery WHERE stop_ref = 'rls-order-b'), 0,
+    'proof user A cannot see B');
+ROLLBACK TO SAVEPOINT s;
+
+-- The org the order belongs to sees it too, so a trade account's staff can
+-- answer a delivery query without holding a driver role.
+SAVEPOINT s;
+  SET LOCAL app.org_id = '11111111-1111-1111-1111-111111111111';
+  SELECT pg_temp.assert_eq((SELECT count(*) FROM logistics.proof_of_delivery), 1, 'proof org A sees own');
 ROLLBACK TO SAVEPOINT s;
 
 -- Merchandising sections are editorial content: the public sees the active,

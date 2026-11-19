@@ -6,6 +6,8 @@ import {
   type DriverEventInput,
   type DriverSyncResult,
   type Order,
+  type ProofCaptureInput,
+  type ProofOfDelivery,
 } from '@ag/api-client';
 import type { DayPack, Stop } from './daypack';
 import { FIXTURE_DAY_PACK } from './fixtures';
@@ -71,4 +73,17 @@ export async function loadDayPack(): Promise<DayPack> {
 /** Replay the offline queue to the gateway. Runs on the server, so the token stays private. */
 export async function replayQueue(events: DriverEventInput[]): Promise<DriverSyncResult> {
   return driverClient().syncDriverEvents(events);
+}
+
+/**
+ * Send the proof captured at a stop. The service keeps the first capture per
+ * stop, so replaying a queued proof is safe.
+ */
+export async function sendProof(stopId: string, capture: ProofCaptureInput): Promise<ProofOfDelivery> {
+  return driverClient().captureProof(stopId, capture);
+}
+
+/** The proof the server holds for a stop, for the driver to check after a sync. */
+export async function fetchProof(stopId: string): Promise<ProofOfDelivery> {
+  return driverClient().proofForStop(stopId);
 }

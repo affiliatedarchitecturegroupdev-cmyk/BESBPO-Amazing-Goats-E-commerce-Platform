@@ -12,6 +12,7 @@ export default function SyncPage() {
   const [pending, setPending] = useState<QueuedEvent[]>([]);
   const [lastSync, setLastSync] = useState<string | undefined>(undefined);
   const [status, setStatus] = useState('Offline');
+  const [proofs, setProofs] = useState(0);
 
   const refresh = useCallback(async () => {
     await loadDemoQueue();
@@ -31,6 +32,8 @@ export default function SyncPage() {
           body: JSON.stringify({ events }),
         });
         if (!res.ok) throw new Error('sync failed');
+        const result = (await res.json()) as { proofs?: number };
+        setProofs(result.proofs ?? 0);
       }, DEVICE_ID);
       setLastSync(new Date().toISOString());
       setStatus(count > 0 ? 'Synced' : 'Nothing to sync');
@@ -48,6 +51,7 @@ export default function SyncPage() {
       <article className="card">
         <p>{pending.length} event{pending.length === 1 ? '' : 's'} waiting</p>
         <p className="p">Last sync {lastSync ? formatTime(lastSync) : 'not yet'}</p>
+        {lastSync && <p className="p">{proofs} proof{proofs === 1 ? '' : 's'} of delivery stored</p>}
       </article>
 
       <p className="p">Driver events win for delivery status. Server wins for order content.</p>
