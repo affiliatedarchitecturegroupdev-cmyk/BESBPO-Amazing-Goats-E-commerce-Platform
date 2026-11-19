@@ -123,6 +123,88 @@ describe('Northflank template (infra/northflank/project.json)', () => {
   });
 });
 
+// The remaining front ends (T-067). Each one has a Dockerfile and a /health
+// route, so the failure this guards is a deployable that exists in the repo and
+// never reaches production — invisible until someone tries to sign in.
+describe('Northflank: the remaining front ends (T-067)', () => {
+  const FRONT_ENDS = [
+    'trade-portal',
+    'admin',
+    'driver-pwa',
+    'advertiser-portal',
+    'partner-portal',
+  ];
+
+  const services = nodesOf(northflank).filter((n) => n.kind === 'CombinedService');
+  const byName = (name) => services.find((n) => n.spec.name === name);
+
+  it('has a node per front end, alongside the storefront', () => {
+    for (const name of FRONT_ENDS) {
+      expect(byName(name), `${name} has no CombinedService node`).toBeTruthy();
+    }
+  });
+
+  it('every front end deploys its own Dockerfile on port 3000 with /health', () => {
+    for (const name of FRONT_ENDS) {
+      const node = byName(name);
+      expect(node.spec.buildSettings?.dockerfile?.dockerFilePath).toBe(`/apps/${name}/Dockerfile`);
+      expect(node.spec.ports?.[0]?.internalPort, `${name} port`).toBe(3000);
+      const check = node.spec.healthChecks?.[0];
+      expect(check?.path, `${name} health path`).toBe('/health');
+      expect(check?.port, `${name} health port`).toBe(3000);
+    }
+  });
+
+  it('serves the public apps on a public port and the admin on a private one', () => {
+    for (const name of ['trade-portal', 'driver-pwa', 'advertiser-portal', 'partner-portal']) {
+      expect(byName(name).spec.ports?.[0]?.public, `${name} must be public`).toBe(true);
+    }
+    // The admin portal holds every permission; it is reached over the private
+    // route, not the public one (docs/02-access-control.md).
+    expect(byName('admin').spec.ports?.[0]?.public).toBe(false);
+  });
+
+  it('configures the staff IP allow-list the admin middleware enforces', () => {
+    const args = northflank.arguments ?? {};
+    expect(args, 'ADMIN_IP_ALLOWLIST must be a template argument').toHaveProperty(
+      'ADMIN_IP_ALLOWLIST',
+    );
+
+    const group = nodesOf(northflank).find((n) => n.kind === 'SecretGroup');
+    expect(group.spec.secrets.variables.ADMIN_IP_ALLOWLIST).toBe('${args.ADMIN_IP_ALLOWLIST}');
+
+    // The value must be a real allow-list, not an empty string: an empty list
+    // makes `isIpAllowed` allow everyone, so the deployed portal would be open.
+    const middleware = readFileSync(join(root, 'apps/admin/middleware.ts'), 'utf8');
+    expect(middleware, 'admin middleware must read ADMIN_IP_ALLOWLIST').toContain(
+      'process.env.ADMIN_IP_ALLOWLIST',
+    );
+    // The rule lives in `@ag/rbac` so the gateway enforces the same one; the
+    // middleware must import it rather than carry a second copy.
+    expect(exists('packages/rbac/src/ip-allowlist.ts'), 'allow-list rule is missing').toBe(true);
+    expect(middleware, 'admin middleware must import the shared rule').toContain('@ag/rbac');
+    expect(
+      exists('apps/admin/lib/ip-allowlist.ts'),
+      'a second copy of the rule would drift from the gateway',
+    ).toBe(false);
+  });
+
+  it('the driver PWA is installable over HTTPS', () => {
+    const node = byName('driver-pwa');
+    // Public + HTTPS is what the service worker needs to register at all.
+    expect(node.spec.ports?.[0]).toMatchObject({ protocol: 'HTTP', public: true });
+
+    // The manifest the app advertises must be checked in, or the install prompt
+    // never appears and the offline app is just a web page.
+    const layout = readFileSync(join(root, 'apps/driver-pwa/app/layout.tsx'), 'utf8');
+    const href = layout.match(/manifest:\s*'([^']+)'/)?.[1];
+    expect(href, 'driver-pwa does not declare a manifest').toBeTruthy();
+    expect(exists(join('apps/driver-pwa/public', href.replace(/^\//, ''))), `${href} is missing`).toBe(
+      true,
+    );
+  });
+});
+
 describe('Koyeb compose (infra/koyeb/koyeb-compose.yaml)', () => {
   it('names an app and at least one service', () => {
     expect(koyeb.app?.name).toBeTruthy();
@@ -162,6 +244,59 @@ describe('Koyeb compose (infra/koyeb/koyeb-compose.yaml)', () => {
           `${entry.definition.name}: ${env.key} has a plaintext value`,
         ).toBeUndefined();
         expect(env.secret, `${entry.definition.name}: ${env.key} has no secret`).toBeTruthy();
+      }
+    }
+  });
+});
+
+// Staging and previews on Koyeb (T-067, docs/14-deployment.md). It lives in its
+// own compose file because the non-core file is all-Python on :8000 while
+// staging runs the Node front door on :3000; the assertion above would reject
+// it, and weakening that assertion to fit both would lose the check for each.
+describe('Koyeb staging compose (infra/koyeb/koyeb-staging.yaml)', () => {
+  const staging = readYaml('infra/koyeb/koyeb-staging.yaml');
+
+  it('is a separate app from the non-core one', () => {
+    expect(staging.app?.name).toBeTruthy();
+    expect(staging.app.name).not.toBe(koyeb.app?.name);
+    expect(staging.services?.length).toBeGreaterThan(0);
+  });
+
+  it('runs the front door and the storefront on port 3000 with /health', () => {
+    const names = staging.services.map((s) => s.definition.name);
+    expect(names).toContain('staging-gateway');
+    expect(names).toContain('staging-storefront');
+
+    for (const entry of staging.services) {
+      const def = entry.definition;
+      expect(def.ports?.[0]?.port, `${def.name} port`).toBe(3000);
+      const check = def.health_checks?.[0]?.http;
+      expect(check?.path, `${def.name} health path`).toBe('/health');
+      expect(check?.port, `${def.name} health port`).toBe(3000);
+
+      const workdir = def.git?.workdir;
+      const dockerfile = def.git?.docker?.dockerfile;
+      expect(exists(join(workdir, dockerfile)), `${def.name} Dockerfile is missing`).toBe(true);
+    }
+  });
+
+  it('scales to zero when idle, so staging does not bill like production', () => {
+    for (const entry of staging.services) {
+      const scaling = entry.definition.scalings?.[0];
+      expect(scaling?.min, `${entry.definition.name} should scale to zero`).toBe(0);
+    }
+  });
+
+  it('uses staging secrets, never the production ones', () => {
+    const secrets = staging.services.flatMap((s) => (s.definition.env ?? []).map((e) => e.secret));
+    expect(secrets.length).toBeGreaterThan(0);
+    for (const secret of secrets) {
+      expect(secret, `${secret} looks like a production secret`).toMatch(/^ag-staging-/);
+      expect(secret).not.toBe('ag-analytics-db-url');
+    }
+    for (const entry of staging.services) {
+      for (const env of entry.definition.env ?? []) {
+        expect(env.value, `${entry.definition.name}: ${env.key} has a plaintext value`).toBeUndefined();
       }
     }
   });
