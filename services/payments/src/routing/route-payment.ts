@@ -1,3 +1,5 @@
+import { estimateFeeCents as estimateFeeFromSchedule } from './provider-fees';
+
 export type Provider = 'peach' | 'payfast' | 'stitch' | 'tradesafe' | 'lulapay' | 'ozow' | 'yoco';
 export type Method = 'pay_by_bank' | 'card' | 'wallet' | 'bnpl' | 'recurring_debit' | 'escrow' | 'trade_bnpl' | 'pos';
 export const ESCROW_MINIMUM_CENTS = 1_000_000; // R10,000, because of the escrow minimum fee
@@ -18,14 +20,11 @@ export function routePayment(i: { method: Method; amountCents: number }): Provid
   }
 }
 
-/** Published rates, excluding VAT, checked November 2026. TODO(T-031): confirm in writing with each provider. */
+/**
+ * The provider fee, in cents. The models live in `provider-fees.ts` (one place
+ * a rate changes, and one place a reviewer checks); `unquotedFeeModels` lists
+ * the rates T-031 still has to confirm in writing.
+ */
 export function estimateFeeCents(provider: Provider, method: Method, amountCents: number): number {
-  const pct = (p: number, fixed = 0, min = 0) => Math.max(min, Math.round((amountCents * p) / 100) + fixed);
-  if (provider === 'payfast' && method === 'card') return pct(3.2, 200);
-  if (provider === 'payfast' && method === 'pay_by_bank') return pct(2, 0, 200);
-  if (provider === 'peach' && method === 'card') return pct(2.95, 150);
-  if (provider === 'peach' && method === 'pay_by_bank') return pct(1.5, 150);
-  if (provider === 'stitch' && method === 'card') return pct(2.95);
-  if (provider === 'tradesafe') return pct(1.5, 0, 10000);
-  throw new Error(`No fee model for ${provider}/${method}`);
+  return estimateFeeFromSchedule(provider, method, amountCents);
 }
