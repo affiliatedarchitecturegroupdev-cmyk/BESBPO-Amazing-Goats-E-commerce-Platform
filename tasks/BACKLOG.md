@@ -58,7 +58,7 @@ Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 
 | T-055 | Storefront: discovery and content pages | 4 | frontend | none |
 | T-056 | Storefront: account, tracking and trade entry | 4 | frontend | none |
 | T-057 | Storefront: design system, fonts, imagery and responsive shell | 4 | frontend | none |
-| T-058 | Identity and gateway: sign-in front door (OIDC and session) | 5 | backend | gate:rbac |
+| T-058 | Identity and gateway: sign-in front door (OIDC and session) — done | 5 | backend | none |
 | T-059 | Apps: sign-in screens, session guard and role-aware navigation | 5 | frontend | none |
 | T-060 | Storefront: legal, POPIA and consumer information pages | 5 | frontend | gate:legal |
 | T-061 | Gateway: reverse proxy for /commerce, /ads and /accounts | 5 | backend | gate:infra |

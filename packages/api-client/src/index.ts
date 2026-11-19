@@ -230,6 +230,23 @@ function query(params: Record<string, string | number | undefined>): string {
 }
 
 /** The transport the client uses; defaults to the global fetch. */
+/** What `GET /gateway/auth/session` reports about the caller (T-058). */
+export interface SessionView {
+  user: { id: string; roles: string[]; orgId?: string };
+  staff: boolean;
+  issuedAt: string | null;
+  expiresAt: string | null;
+  secondsRemaining: number | null;
+}
+
+/** What `GET /gateway/auth/me` reports about the caller. */
+export interface MeView {
+  id: string;
+  roles: string[];
+  orgId?: string;
+  staff: boolean;
+}
+
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 export function createClient(
@@ -248,6 +265,17 @@ export function createClient(
   }
 
   return {
+    // Session (T-058). `loginUrl` is where a portal sends a browser that has no
+    // session; the gateway redirects on to the identity provider. `logout` and
+    // `refresh` are POSTs the portal's server calls, since the session cookie is
+    // httpOnly and only the server can read it.
+    loginUrl: (returnTo = '/') =>
+      `${baseUrl}/gateway/auth/login${query({ returnTo })}`,
+    session: () => req<SessionView>('/gateway/auth/session'),
+    me: () => req<MeView>('/gateway/auth/me'),
+    logout: () => req<void>('/gateway/auth/logout', { method: 'POST' }),
+    refreshSession: () => req<void>('/gateway/auth/refresh', { method: 'POST' }),
+
     // Catalogue and cycles.
     home: () => req<HomeResponse>('/gateway/bff/home'),
     // The curated, resolved sections for a storefront page (the staff

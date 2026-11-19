@@ -70,3 +70,47 @@ describe('api-client', () => {
   });
 
 });
+
+describe('session endpoints (T-058)', () => {
+  it('builds a login URL a portal can redirect to, encoding the return path', () => {
+    const client = createClient('https://api.example');
+    expect(client.loginUrl('/orders?tab=open')).toBe(
+      'https://api.example/gateway/auth/login?returnTo=%2Forders%3Ftab%3Dopen',
+    );
+    expect(client.loginUrl()).toBe('https://api.example/gateway/auth/login?returnTo=%2F');
+  });
+
+  it('reads the session with the caller cookies attached', async () => {
+    const seen: string[] = [];
+    const client = createClient(
+      'https://api.example',
+      () => ({ cookie: 'ag_session=tok' }),
+      async (url) => {
+        seen.push(url);
+        return new Response(
+          JSON.stringify({
+            user: { id: 'u-1', roles: ['executive'] },
+            staff: true,
+            issuedAt: null,
+            expiresAt: null,
+            secondsRemaining: 600,
+          }),
+          { status: 200 },
+        );
+      },
+    );
+    const session = await client.session();
+    expect(seen[0]).toBe('https://api.example/gateway/auth/session');
+    expect(session.staff).toBe(true);
+  });
+
+  it('logs out with a POST', async () => {
+    const calls: Array<{ url: string; method?: string }> = [];
+    const client = createClient('https://api.example', () => ({}), async (url, init) => {
+      calls.push({ url, method: init?.method });
+      return new Response(null, { status: 204 });
+    });
+    await client.logout();
+    expect(calls[0]).toEqual({ url: 'https://api.example/gateway/auth/logout', method: 'POST' });
+  });
+});
