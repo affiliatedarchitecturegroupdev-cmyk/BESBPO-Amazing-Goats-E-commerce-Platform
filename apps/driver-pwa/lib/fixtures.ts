@@ -1,5 +1,6 @@
 import type { DayPack } from './daypack';
-import { MemoryQueue, withId, type QueuedEvent } from './offline-queue';
+import { MemoryQueue, withId, type OfflineQueue, type QueuedEvent } from './offline-queue';
+import { createQueue } from './indexeddb-queue';
 
 /**
  * Fixtures only (T-050): the day pack the app falls back to when the gateway
@@ -23,8 +24,15 @@ export const FIXTURE_DAY_PACK: DayPack = {
   ],
 };
 
-/** Demo queue for local runs, so the sync screen shows the same state as the wireframe. */
-export const queue: MemoryQueue = new MemoryQueue();
+/** Device id used by the demo queue and the sync route. */
+export const DEVICE_ID = 'dev-demo-1';
+
+/**
+ * The queue every screen writes to. On a real handset this is the durable,
+ * encrypted IndexedDB queue (T-066), so a capture survives a closed tab; in a
+ * non-browser run (a test, or server-side rendering) it falls back to memory.
+ */
+export const queue: OfflineQueue = createQueue(DEVICE_ID) ?? new MemoryQueue();
 
 const seed: QueuedEvent[] = [
   withId({ type: 'arrived', stopId: 'cafe-a', at: '2026-11-18T06:00:00+02:00' }),
@@ -36,10 +44,12 @@ const seed: QueuedEvent[] = [
   withId({ type: 'delivered', stopId: 'bakery-b', at: '2026-11-18T06:33:00+02:00' }),
 ];
 
-let loaded = false;
-/** Load the demo events once per session, so refreshes do not duplicate them. */
+/**
+ * Load the demo events once per session. With a durable queue "once per session"
+ * is not enough — a reload would re-seed and duplicate the demo day — so the
+ * seed is skipped when anything is already pending.
+ */
 export async function loadDemoQueue(): Promise<void> {
-  if (loaded) return;
-  loaded = true;
+  if ((await queue.pending()).length > 0) return;
   for (const event of seed) await queue.enqueue(event);
 }

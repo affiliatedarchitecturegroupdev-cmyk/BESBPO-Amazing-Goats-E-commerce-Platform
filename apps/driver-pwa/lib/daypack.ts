@@ -43,3 +43,31 @@ export function nextStop(pack: DayPack, currentId: string): Stop | null {
   const i = ordered.findIndex((s) => s.id === currentId);
   return i >= 0 && i + 1 < ordered.length ? ordered[i + 1] : null;
 }
+
+/** Why the day cannot be closed yet. */
+export type DayCloseBlocker = 'queue_not_drained' | 'stops_remaining';
+
+/**
+ * Whether the day may be closed (T-066). Closing clears the queue and the local
+ * ledger, so it must only happen once nothing is left to send and every stop has
+ * been accounted for — otherwise a driver ends the day and silently discards
+ * evidence.
+ *
+ * `completedStopIds` is every stop that was delivered *or* refused, read from the
+ * day ledger rather than the queue: the queue is emptied by a successful sync, so
+ * deriving progress from it would reset the route every time signal came back.
+ *
+ * Kept pure and separate from the button, so the rule is the same whether the
+ * screen, a background sync or a test asks.
+ */
+export function canCloseDay(input: {
+  pack: DayPack;
+  completedStopIds: readonly string[];
+  pendingEvents: number;
+}): { ok: true } | { ok: false; blocker: DayCloseBlocker } {
+  if (input.pendingEvents > 0) return { ok: false, blocker: 'queue_not_drained' };
+  const done = new Set(input.completedStopIds);
+  const remaining = input.pack.stops.filter((s) => !done.has(s.id));
+  if (remaining.length > 0) return { ok: false, blocker: 'stops_remaining' };
+  return { ok: true };
+}

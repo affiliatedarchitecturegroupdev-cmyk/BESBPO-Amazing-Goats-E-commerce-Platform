@@ -4,7 +4,8 @@ import Link from 'next/link';
 import type { Stop } from '../lib/daypack';
 import { CHILLED_MAX_CELSIUS, formatCelsius, temperatureOutOfRange, validateProof } from '../lib/proof';
 import { withId } from '../lib/offline-queue';
-import { queue } from '../lib/fixtures';
+import { queue, DEVICE_ID } from '../lib/fixtures';
+import { createLedger } from '../lib/day-ledger';
 import { formatRand } from '../lib/format';
 
 /** The proof-of-delivery form. It runs in the browser and writes to the offline queue. */
@@ -20,9 +21,13 @@ export function ProofForm({ stop }: { stop: Stop }) {
 
   async function save() {
     if (!check.ok) return;
-    await queue.enqueue(withId({ type: 'delivered', stopId: stop.id, at: new Date().toISOString(), signatureDataUrl: signature || undefined }));
-    if (celsius !== undefined) await queue.enqueue(withId({ type: 'temperature', stopId: stop.id, at: new Date().toISOString(), celsius }));
-    if (cash !== undefined) await queue.enqueue(withId({ type: 'cash', stopId: stop.id, at: new Date().toISOString(), amountCents: cash }));
+    const at = new Date().toISOString();
+    await queue.enqueue(withId({ type: 'delivered', stopId: stop.id, at, signatureDataUrl: signature || undefined }));
+    if (celsius !== undefined) await queue.enqueue(withId({ type: 'temperature', stopId: stop.id, at, celsius }));
+    if (cash !== undefined) await queue.enqueue(withId({ type: 'cash', stopId: stop.id, at, amountCents: cash }));
+    // Mark the stop done in the ledger too, so progress survives the queue being
+    // cleared by a successful sync and day-close can be reached.
+    await createLedger(DEVICE_ID).record(stop.id, 'delivered', at);
     setSaved(true);
   }
 
