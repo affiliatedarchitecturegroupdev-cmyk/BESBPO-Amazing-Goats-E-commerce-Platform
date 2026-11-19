@@ -66,5 +66,5 @@ Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 
 | T-063 | Identity: persist MFA enrolments (SQL adapter) | 5 | backend | gate:db |
 | T-064 | Apps: error, not-found and loading screens; SEO and PWA basics | 5 | frontend | none |
 | T-065 | Logistics: implement proof of delivery (read, capture, temperature) — done | 5 | backend | none |
-| T-066 | Driver PWA: IndexedDB offline queue and day-close | 5 | frontend | none |
+| T-066 | Driver PWA: IndexedDB offline queue and day-close — done | 5 | frontend | none |
 | T-067 | Infra: deploy the remaining front ends (trade, admin, driver, advertiser, partner) | 5 | devops | gate:infra |

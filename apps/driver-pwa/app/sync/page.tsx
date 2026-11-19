@@ -2,24 +2,54 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { type QueuedEvent } from '../../lib/offline-queue';
-import { queue, loadDemoQueue } from '../../lib/fixtures';
+import { queue, loadDemoQueue, DEVICE_ID, FIXTURE_DAY_PACK } from '../../lib/fixtures';
 import { syncQueue } from '../../lib/sync';
+import { canCloseDay, type DayCloseBlocker } from '../../lib/daypack';
+import { createLedger, type DayLedger } from '../../lib/day-ledger';
 import { formatTime } from '../../lib/format';
 
-const DEVICE_ID = 'dev-demo-1';
+const ledger: DayLedger = createLedger(DEVICE_ID);
+
+const BLOCKER_TEXT: Record<DayCloseBlocker, string> = {
+  queue_not_drained: 'Sync before closing the day, or the queued captures are lost.',
+  stops_remaining: 'Every stop must be delivered or refused before the day can close.',
+};
 
 export default function SyncPage() {
   const [pending, setPending] = useState<QueuedEvent[]>([]);
   const [lastSync, setLastSync] = useState<string | undefined>(undefined);
   const [status, setStatus] = useState('Offline');
   const [proofs, setProofs] = useState(0);
+  const [closeNote, setCloseNote] = useState<string | undefined>(undefined);
+  const [closed, setClosed] = useState(false);
+  const [completedStopIds, setCompletedStopIds] = useState<string[]>([]);
 
   const refresh = useCallback(async () => {
     await loadDemoQueue();
     setPending(await queue.pending());
+    setCompletedStopIds((await ledger.all()).map((s) => s.stopId));
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  async function closeDay() {
+    const verdict = canCloseDay({
+      pack: FIXTURE_DAY_PACK,
+      completedStopIds,
+      pendingEvents: pending.length,
+    });
+    if (!verdict.ok) {
+      setCloseNote(BLOCKER_TEXT[verdict.blocker]);
+      return;
+    }
+    // Nothing is left to send and every stop is accounted for, so the day's
+    // evidence is safely on the server and the local queue can go.
+    await queue.clear();
+    await ledger.clear();
+    setClosed(true);
+    setCloseNote('Day closed. Local queue cleared.');
+    await refresh();
+  }
 
   async function syncNow() {
     try {
@@ -56,8 +86,15 @@ export default function SyncPage() {
 
       <p className="p">Driver events win for delivery status. Server wins for order content.</p>
 
+      <p className="p">{completedStopIds.length} of {FIXTURE_DAY_PACK.stops.length} stops accounted for</p>
+
       <button className="btn" type="button" onClick={syncNow}>Sync now</button>
       <button className="btn btn-outline" type="button" onClick={refresh}>Refresh queue</button>
+      <button className="btn btn-outline" type="button" onClick={closeDay} disabled={closed}>
+        {closed ? 'Day closed' : 'Close day'}
+      </button>
+
+      {closeNote && <p className="p">{closeNote}</p>}
     </section>
   );
 }
