@@ -127,7 +127,13 @@ the code:
 - every HTTP health path is one the app serves (`/health` for every service and
   every Next.js app, which serves it from `app/health/route.ts`);
 - the Koyeb services build existing Dockerfiles in real regions and reference
-  secrets by name, never by value.
+  secrets by name, never by value;
+- all six front ends have a node, on port 3000, with `/health`; the admin is
+  private and the driver PWA is public and serves its manifest;
+- the admin's `ADMIN_IP_ALLOWLIST` is a template argument wired into the secret
+  group, and the middleware reads it;
+- staging builds real Dockerfiles, scales to zero, and uses only `ag-staging-*`
+  secrets.
 
 Run just this test with:
 
@@ -135,10 +141,43 @@ Run just this test with:
 vitest run --config vitest.deploy.config.mjs
 ```
 
-## Adding a front end
+## Front ends
 
-The other Next.js apps (`trade-portal`, `admin`, `driver-pwa`,
-`advertiser-portal`, `partner-portal`) follow the storefront: a `CombinedService`
-node on port 3000 with `dockerFilePath` `/apps/<name>/Dockerfile` and an HTTP
-health check on `/health`, served by `app/health/route.ts`. Add them when they
-have something to serve.
+All six Next.js apps deploy as a `CombinedService` node on port 3000 with
+`dockerFilePath` `/apps/<name>/Dockerfile` and an HTTP health check on `/health`,
+served by `app/health/route.ts`:
+
+| App | Port | Public | Notes |
+|---|---|---|---|
+| `storefront` | 3000 | yes | public shop |
+| `trade-portal` | 3000 | yes | wholesale ordering |
+| `driver-pwa` | 3000 | yes | installable PWA, needs HTTPS for the service worker |
+| `advertiser-portal` | 3000 | yes | campaigns and wallet |
+| `partner-portal` | 3000 | yes | partner orders and documents |
+| `admin` | 3000 | **no** | private route, staff IP allow-list only |
+
+A new front end is a new node in the same shape; `infra/deploy.spec.mjs` fails
+the build if one of the six loses its node, its port or its health check.
+
+### Admin access
+
+The admin portal is on the private route and is additionally gated by the staff
+IP allow-list (`apps/admin/middleware.ts`, rule in `apps/admin/lib/ip-allowlist.ts`).
+It reads `ADMIN_IP_ALLOWLIST` — a comma-separated list of addresses and CIDR
+blocks, for example `196.25.1.0/24,41.13.7.20`.
+
+Set it on the admin service before first deploy. An **empty or unset** value
+disables the filter, which is correct for local development and wrong in
+production: it would leave a portal holding every permission open to anyone who
+reaches the route. `/health` is exempt so the platform's readiness probe, which
+comes from Northflank's network rather than the office, does not fail and
+restart a healthy service.
+
+### Staging and previews
+
+`infra/koyeb/koyeb-staging.yaml` runs the front door and the storefront in `fra`,
+scaling to zero when idle. It is a separate compose file from the non-core one
+because that file is all-Python on `:8000` while staging runs Node on `:3000`;
+the contract test asserts the port per file, so folding them together would lose
+the check for both. Staging secrets are named `ag-staging-*` and must never be
+the production addon — the test fails if a production secret name appears here.
