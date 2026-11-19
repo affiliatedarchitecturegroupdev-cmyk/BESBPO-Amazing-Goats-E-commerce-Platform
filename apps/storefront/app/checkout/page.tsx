@@ -64,8 +64,23 @@ export default async function CheckoutPage({ searchParams }: { searchParams: { e
       })}
 
       <h2>4 Review</h2>
-      <div className="fld">Summary · VAT invoice · terms and privacy consent</div>
       <div className="row"><span>Total</span><strong>{formatRand(totals.totalIncVatCents)}</strong></div>
+
+      {/* The CPA requires the terms to be available before payment, so the
+          consent sits with the button rather than on a page a shopper may never
+          visit. `required` makes the browser refuse a submit without it. */}
+      <p className="p">
+        <label>
+          <input type="checkbox" name="acceptTerms" value="yes" required /> I accept the{' '}
+          <a href="/terms" target="_blank" rel="noopener">terms of sale</a> and have read the{' '}
+          <a href="/privacy" target="_blank" rel="noopener">privacy notice</a>.
+        </label>
+      </p>
+      <p className="p">
+        Perishable items cannot be cancelled after the cut-off, because they are bought and
+        slaughtered to your order. You can change or cancel free of charge until then — see the{' '}
+        <a href="/returns" target="_blank" rel="noopener">returns policy</a>.
+      </p>
 
       <form action={placeOrder}>
         <input type="hidden" name="lines" value={lines} />

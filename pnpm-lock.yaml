@@ -195,6 +195,9 @@ importers:
       '@ag/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@ag/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
       '@ag/rbac':
         specifier: workspace:*
         version: link:../../packages/rbac
@@ -362,6 +365,18 @@ importers:
         version: 2.1.9(@types/node@20.19.43)
 
   packages/observability:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.16.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.4
+        version: 2.1.9(@types/node@20.19.43)
+
+  packages/policy:
     devDependencies:
       '@types/node':
         specifier: ^20.16.0

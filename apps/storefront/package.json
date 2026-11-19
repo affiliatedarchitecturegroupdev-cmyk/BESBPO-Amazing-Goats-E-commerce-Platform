@@ -12,6 +12,7 @@
   "dependencies": {
     "@ag/api-client": "workspace:*",
     "@ag/observability": "workspace:*",
+    "@ag/policy": "workspace:*",
     "@ag/rbac": "workspace:*",
     "@ag/shared-types": "workspace:*",
     "@ag/ui-tokens": "workspace:*",

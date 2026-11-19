@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { SiteHeader } from '../components/SiteHeader';
+import { SiteFooter } from '../components/SiteFooter';
 import { ServiceWorkerRegistrar } from '../components/ServiceWorkerRegistrar';
 import { SITE_DESCRIPTION, SITE_LOCALE, SITE_NAME, siteUrl } from '../lib/seo';
 
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <SiteHeader />
         <main className="container">{children}</main>
+        <SiteFooter />
         <div className="strip" />
         <ServiceWorkerRegistrar />
       </body>
