@@ -57,6 +57,45 @@ the template, and they are written into the `ag-app-secrets` secret group as
 Changing any of this file needs the `human-approved` label (`infra/**` is a
 gated path).
 
+## Sign-in (T-058)
+
+The gateway is the only place a session is created. `GET /gateway/auth/login`
+redirects to the identity provider, `GET /gateway/auth/callback` exchanges the
+code and sets an httpOnly cookie, and `POST /gateway/auth/logout` clears it.
+Portals send a browser with no session to `loginUrl(returnTo)` from
+`@ag/api-client`; they never hold the token themselves.
+
+Set these on the gateway service:
+
+| Variable | Purpose |
+|---|---|
+| `JWT_SECRET` | Signs the session cookie **and** the OIDC `state`. Required. |
+| `OIDC_ISSUER` | Realm issuer, e.g. `https://id.amazinggoats.co.za/realms/ag` |
+| `OIDC_CLIENT_ID` | Client registered for the gateway |
+| `OIDC_REDIRECT_URI` | Must match the IdP registration exactly, including scheme |
+| `OIDC_SCOPES` | Defaults to `profile email`; `openid` is always added |
+| `OIDC_ID_TOKEN_SECRET` | HS256 realms only |
+| `OIDC_ID_TOKEN_PUBLIC_KEY` | RS256 realms (the usual case) |
+| `SESSION_MINUTES` | Session lifetime, default 15 |
+| `REFRESH_MINUTES` | Longest a session can be renewed, default 480 |
+| `STAFF_IP_ALLOWLIST` | Comma-separated IPs/CIDRs for staff routes |
+
+`JWT_SECRET` is not in the Northflank template's `arguments`; add it as a
+secret before enabling sign-in. Without `OIDC_ISSUER` and `OIDC_CLIENT_ID` the
+login route answers 503 rather than redirecting somewhere broken.
+
+Two things worth knowing before changing this:
+
+- **The session cookie is the only copy of the token.** It is httpOnly, so a
+  portal cannot read it — which is the point — and every call is made
+  server-side or through the gateway. If you need a browser-side call, add a
+  route on the portal server rather than unsetting `HttpOnly`.
+- **`STAFF_IP_ALLOWLIST` restricts staff callers only.** External trade and
+  partner users reach their own routes from anywhere, which is what they need
+  in the field. The same list also runs in the admin portal's middleware; both
+  are needed because one stops a browser loading a page and the other stops a
+  token being replayed from off-network.
+
 ## Koyeb
 
 `infra/koyeb/koyeb-compose.yaml` is a `koyeb compose` file. Apply it with the
