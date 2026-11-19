@@ -24,6 +24,8 @@ import type {
   MerchSection,
   PartnerDocument,
   PriceList,
+  ProofCaptureInput,
+  ProofOfDelivery,
   PurchaseOrder,
   Recall,
   Settlement,
@@ -342,6 +344,17 @@ export function createClient(
         method: 'POST',
         body: JSON.stringify({ events }),
       }),
+
+    // Proof of delivery: capture at the stop, and read the proof of a stop.
+    captureProof: (stopId: string, body: ProofCaptureInput) =>
+      req<ProofOfDelivery>(`/logistics/proof-of-delivery/stops/${encodeURIComponent(stopId)}`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    proofForStop: (stopId: string) =>
+      req<ProofOfDelivery>(
+        `/logistics/proof-of-delivery/stops/${encodeURIComponent(stopId)}`,
+      ),
   };
 }
 

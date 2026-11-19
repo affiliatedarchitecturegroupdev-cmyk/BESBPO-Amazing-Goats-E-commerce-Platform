@@ -280,6 +280,26 @@ export interface DriverEventInput {
   payload: Record<string, unknown>;
 }
 
+/** A proof-of-delivery capture, as the driver app posts it. */
+export interface ProofCaptureInput {
+  signature?: string;
+  photoRef?: string;
+  temperatureC?: number;
+  capturedAt?: string;
+  recipientName?: string;
+}
+
+/** A stored proof of delivery, matching logistics `ProofOfDelivery`. */
+export interface ProofOfDelivery {
+  stopId: string;
+  signature?: string;
+  photoRef?: string;
+  temperatureC?: number;
+  temperatureExcursion?: boolean;
+  capturedAt: string;
+  recipientName?: string;
+}
+
 /** What the logistics sync endpoint answers with. */
 export interface DriverSyncResult {
   accepted: number;
