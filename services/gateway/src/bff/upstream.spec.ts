@@ -3,21 +3,84 @@ import {
   TtlCache,
   coerceItems,
   isOrderOpen,
+  missingRequiredUpstreams,
   readUpstreamsFromEnv,
+  upstreamEnvKey,
   toCatalogueItem,
   visibleTo,
 } from './upstream';
 
 describe('readUpstreamsFromEnv', () => {
-  it('falls back to local ports', () => {
+  it('falls back to local ports in development', () => {
     const u = readUpstreamsFromEnv({});
     expect(u.commerce).toBe('http://localhost:3001');
     expect(u.identity).toBe('http://localhost:3009');
   });
+
   it('honours explicit URLs', () => {
     const u = readUpstreamsFromEnv({ COMMERCE_URL: 'http://commerce:8080', IDENTITY_URL: 'http://id:9000' });
     expect(u.commerce).toBe('http://commerce:8080');
     expect(u.identity).toBe('http://id:9000');
+  });
+
+  it('leaves an unset upstream undefined in production rather than pointing at localhost', () => {
+    // Inside a container localhost is the gateway itself, so a localhost default
+    // would send a catalogue read back into the gateway and fail as a connection
+    // error that says nothing about the missing variable.
+    const u = readUpstreamsFromEnv({ NODE_ENV: 'production', COMMERCE_URL: 'http://commerce:3001' });
+    expect(u.commerce).toBe('http://commerce:3001');
+    expect(u.ads).toBeUndefined();
+    expect(u.analytics).toBeUndefined();
+  });
+
+  it('never yields a localhost address in production', () => {
+    const u = readUpstreamsFromEnv({ NODE_ENV: 'production' });
+    const values = Object.values(u).filter((v): v is string => typeof v === 'string');
+    expect(values.filter((v) => v.includes('localhost'))).toEqual([]);
+  });
+});
+
+describe('missingRequiredUpstreams', () => {
+  const full = {
+    commerce: 'http://commerce:3001',
+    payments: 'http://payments:3005',
+    logistics: 'http://logistics:3004',
+    notifications: 'http://notifications:3006',
+  };
+
+  it('is satisfied by the launch set', () => {
+    expect(missingRequiredUpstreams(full, { NODE_ENV: 'production' })).toEqual([]);
+  });
+
+  it('names each required service that has no address', () => {
+    const { commerce, ...rest } = full;
+    expect(missingRequiredUpstreams(rest, { NODE_ENV: 'production' })).toEqual(['commerce']);
+    expect(missingRequiredUpstreams({}, { NODE_ENV: 'production' })).toEqual([
+      'commerce',
+      'payments',
+      'logistics',
+      'notifications',
+    ]);
+  });
+
+  it('does not block a development run, where every default is set', () => {
+    expect(missingRequiredUpstreams({}, {})).toEqual([]);
+  });
+
+  it('does not require the services that run as modules at launch', () => {
+    // stock, accounts, ads, partners, identity and analytics are modules of the
+    // launch set; requiring their URLs would make the template unrunnable.
+    const missing = missingRequiredUpstreams(full, { NODE_ENV: 'production' });
+    for (const modular of ['stock', 'accounts', 'ads', 'partners', 'identity', 'analytics']) {
+      expect(missing).not.toContain(modular);
+    }
+  });
+});
+
+describe('upstreamEnvKey', () => {
+  it('maps a service name to its environment variable', () => {
+    expect(upstreamEnvKey('commerce')).toBe('COMMERCE_URL');
+    expect(upstreamEnvKey('notifications')).toBe('NOTIFICATIONS_URL');
   });
 });
 

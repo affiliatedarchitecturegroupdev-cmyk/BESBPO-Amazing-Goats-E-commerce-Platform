@@ -57,6 +57,33 @@ the template, and they are written into the `ag-app-secrets` secret group as
 Changing any of this file needs the `human-approved` label (`infra/**` is a
 gated path).
 
+### Upstream addresses (T-061)
+
+The gateway reaches the core services over the project's private network, which
+Northflank resolves as `[service-name]:[port-number]`. The secret group carries
+one `<NAME>_URL` per proxied service:
+
+| Variable | Value | Notes |
+| --- | --- | --- |
+| `COMMERCE_URL` | `http://commerce:3001` | catalogue, orders, merchandising |
+| `PAYMENTS_URL` | `http://payments:3005` | checkout, refunds |
+| `LOGISTICS_URL` | `http://logistics:3004` | delivery, proof of delivery |
+| `NOTIFICATIONS_URL` | `http://notifications:3006` | email, WhatsApp, push |
+
+These four are **required**: `services/gateway/src/main.ts` refuses to boot when
+one has no address, because a gateway that starts and then fails every read is
+harder to diagnose than one that fails at deploy time with the variable named in
+the log. The remaining prefixes (`stock`, `accounts`, `ads`, `partners`,
+`identity`, `analytics`) run as modules inside these services at launch
+(ADR 0002), so their URLs are deliberately absent and the proxy answers `503`
+for them until they are split out. Never point a `<NAME>_URL` at `localhost`: in
+a container that is the gateway itself.
+
+`infra/deploy.spec.mjs` asserts the wiring — each URL names a deployed service,
+matches that service's internal port, and is not localhost — and reads the
+proxied prefix list from `proxy.routes.ts`, so adding a prefix to the proxy
+fails the deploy test until the service is deployed or the gap is recorded.
+
 ## Sign-in (T-058)
 
 The gateway is the only place a session is created. `GET /gateway/auth/login`

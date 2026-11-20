@@ -43,6 +43,15 @@ const NEST_PORT = (dir) => {
 const northflank = readJson('infra/northflank/project.json');
 const koyeb = readYaml('infra/koyeb/koyeb-compose.yaml');
 
+// The prefixes the gateway proxies, read from the proxy's own prefix map so the
+// deploy contract cannot drift from the code. `upstream` is the service name.
+function proxiedUpstreams() {
+  const src = readFileSync(join(root, 'services/gateway/src/proxy/proxy.routes.ts'), 'utf8');
+  const out = [];
+  for (const m of src.matchAll(/\{\s*prefix:\s*'[^']+',\s*upstream:\s*'([a-z]+)'\s*\}/g)) out.push(m[1]);
+  return out;
+}
+
 describe('Northflank template (infra/northflank/project.json)', () => {
   it('is a v1.2 template with a workflow root', () => {
     expect(northflank.apiVersion).toBe('v1.2');
@@ -120,6 +129,83 @@ describe('Northflank template (infra/northflank/project.json)', () => {
         );
       }
     }
+  });
+
+  // The gateway proxies every service prefix (`/commerce`, `/accounts`, ...) to
+  // the owning service. The proxy is useless if the gateway has no address for
+  // that service, and the failure is silent: an unset URL used to fall back to
+  // `localhost`, which inside a container is the gateway itself. So the contract
+  // is asserted on the *wiring* — the service exists, the gateway has its URL,
+  // and the URL names the deployed service rather than localhost.
+  describe('gateway reaches every service it proxies', () => {
+    const services = () =>
+      nodesOf(northflank)
+        .filter((n) => n.kind === 'CombinedService')
+        .map((n) => n.spec);
+
+    const upstreams = () => {
+      const group = nodesOf(northflank).find((n) => n.kind === 'SecretGroup');
+      const vars = group.spec.secrets.variables;
+      // Only the variables that name a proxied service. `SMTP_URL`,
+      // `STORE_URL` and `CORPORATE_URL` end in `_URL` too but point at a mail
+      // server or a public site, so matching the suffix alone would treat them
+      // as upstreams and demand a service called `smtp`.
+      const proxied = new Set(proxiedUpstreams());
+      return Object.entries(vars)
+        .filter(([key]) => proxied.has(key.replace(/_URL$/, '').toLowerCase()))
+        .map(([key, value]) => ({ key, service: key.replace(/_URL$/, '').toLowerCase(), value: String(value) }));
+    };
+
+    it('declares a URL for every core service the gateway forwards to', () => {
+      // The launch topology: gateway, commerce, payments, logistics,
+      // notifications (docs/14-deployment.md, ADR 0002). Each must be reachable.
+      const wired = upstreams().map((u) => u.service);
+      for (const name of ['commerce', 'payments', 'logistics', 'notifications']) {
+        expect(wired, `${name} has no *_URL in the secret group`).toContain(name);
+      }
+    });
+
+    it('points each URL at a service that is actually deployed', () => {
+      const deployed = new Set(services().map((s) => s.name));
+      for (const { key, service, value } of upstreams()) {
+        expect(deployed, `${key} names a service that is not deployed`).toContain(service);
+      }
+    });
+
+    it('never points an upstream at localhost', () => {
+      // Inside a container localhost is the gateway, so this is the difference
+      // between "reaches commerce" and "calls itself and times out".
+      for (const { key, value } of upstreams()) {
+        expect(value, `${key} points at localhost`).not.toMatch(/localhost|127\.0\.0\.1/);
+      }
+    });
+
+    it('uses the deployed service internal address and port', () => {
+      const byName = new Map(services().map((s) => [s.name, s]));
+      for (const { key, service, value } of upstreams()) {
+        const svc = byName.get(service);
+        const port = svc.ports?.[0]?.internalPort;
+        // Northflank resolves `[service-name]:[port-number]` inside a project.
+        expect(value, `${key} does not match ${service}'s internal address`).toBe(
+          `http://${service}:${port}`,
+        );
+      }
+    });
+
+    it('keeps every proxied prefix either deployed or documented as a module', () => {
+      // The proxy maps ten prefixes but the launch topology deploys four
+      // services; stock, accounts, ads, partners, identity and analytics are
+      // meant to run as modules inside them (ADR 0002). Until they are mounted,
+      // the gateway answers 503 for those prefixes — that is a known gap, so it
+      // is pinned here rather than discovered by a user. The proxied set comes
+      // from the proxy source, so adding a prefix fails this test until the
+      // service is deployed or the gap list is updated deliberately.
+      const deployed = new Set(services().map((s) => s.name));
+      const undeployed = proxiedUpstreams().filter((p) => !deployed.has(p)).sort();
+      expect(undeployed).toEqual([
+        'accounts', 'ads', 'analytics', 'identity', 'partners', 'stock',
+      ]);
+    });
   });
 });
 

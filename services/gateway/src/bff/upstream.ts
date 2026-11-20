@@ -23,7 +23,7 @@ export type FetchLike = (
 ) => Promise<FetchResponseLike>;
 
 export interface Upstreams {
-  commerce: string;
+  commerce?: string;
   stock?: string;
   accounts?: string;
   logistics?: string;
@@ -48,14 +48,59 @@ const DEFAULTS: Upstreams = {
   analytics: 'http://localhost:8000',
 };
 
-/** Upstream base URLs from `<NAME>_URL` env vars, falling back to local ports. */
+/** Every upstream name, so the env reader and the deploy contract agree on the set. */
+export const UPSTREAM_NAMES = Object.keys(DEFAULTS) as (keyof Upstreams)[];
+
+/**
+ * The upstreams a deployed gateway cannot work without. Each one is a service
+ * in the launch topology; if its URL is missing in production the gateway would
+ * have nowhere to send traffic that the front ends depend on, so it refuses to
+ * start rather than serving 500s. The others (stock, accounts, ads, partners,
+ * identity, analytics) run as modules of these services at launch, so they may
+ * be absent — the proxy answers 503 for them instead.
+ */
+export const REQUIRED_UPSTREAMS: readonly (keyof Upstreams)[] = [
+  'commerce',
+  'payments',
+  'logistics',
+  'notifications',
+];
+
+/** The `<NAME>_URL` env var that configures an upstream. */
+export function upstreamEnvKey(name: keyof Upstreams): string {
+  return `${name.toUpperCase()}_URL`;
+}
+
+/**
+ * Upstream base URLs from `<NAME>_URL` env vars.
+ *
+ * The localhost defaults are a development convenience only. In production an
+ * unset variable resolves to `undefined`, never to localhost: inside a container
+ * `localhost` is the gateway itself, so a missing `COMMERCE_URL` would send
+ * every catalogue read back into the gateway and fail as a connection error
+ * with no hint of the cause. Leaving it undefined lets the proxy answer a
+ * truthful 503 naming the service that is not configured.
+ */
 export function readUpstreamsFromEnv(env: NodeJS.ProcessEnv = process.env): Upstreams {
-  const out: Upstreams = { commerce: env.COMMERCE_URL || DEFAULTS.commerce };
-  for (const name of ['stock', 'accounts', 'logistics', 'payments', 'notifications', 'ads', 'partners', 'identity', 'analytics'] as const) {
-    const key = `${name.toUpperCase()}_URL` as keyof NodeJS.ProcessEnv;
-    out[name] = env[key] || DEFAULTS[name];
+  const production = env.NODE_ENV === 'production';
+  const out: Upstreams = {};
+  for (const name of UPSTREAM_NAMES) {
+    out[name] = env[upstreamEnvKey(name)] || (production ? undefined : DEFAULTS[name]);
   }
   return out;
+}
+
+/**
+ * The required upstreams with no address, so startup can fail loudly. Returns an
+ * empty array when the configuration is complete. Only enforced in production:
+ * a developer running the gateway against local ports has every default set.
+ */
+export function missingRequiredUpstreams(
+  upstreams: Upstreams,
+  env: NodeJS.ProcessEnv = process.env,
+): (keyof Upstreams)[] {
+  if (env.NODE_ENV !== 'production') return [];
+  return REQUIRED_UPSTREAMS.filter((name) => !upstreams[name]);
 }
 
 /** Which catalogue channels a viewer may see: public sees public packs, trade sees trade lots. */
