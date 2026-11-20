@@ -140,7 +140,12 @@
                       "CORPORATE_URL": "${args.CORPORATE_URL}",
                       "ORDERS_EMAIL": "${args.ORDERS_EMAIL}",
                       "FIELD_ENCRYPTION_KEY": "${args.FIELD_ENCRYPTION_KEY}",
-                      "ADMIN_IP_ALLOWLIST": "${args.ADMIN_IP_ALLOWLIST}"
+                      "ADMIN_IP_ALLOWLIST": "${args.ADMIN_IP_ALLOWLIST}",
+
+                      "COMMERCE_URL": "http://commerce:3001",
+                      "PAYMENTS_URL": "http://payments:3005",
+                      "LOGISTICS_URL": "http://logistics:3004",
+                      "NOTIFICATIONS_URL": "http://notifications:3006"
                     },
                     "files": {}
                   },

@@ -73,6 +73,31 @@ describe('ProxyService.forward', () => {
     await expect(svc.forward(req({ originalUrl: '/ads/campaigns' }))).rejects.toBeInstanceOf(UnknownUpstreamError);
   });
 
+  it('answers 503, not 500, for a service that runs as a module at launch', async () => {
+    // A prefix with no address is a known state (stock/accounts/ads/partners/
+    // identity/analytics are modules of the core services until split out), so
+    // the caller gets a 503 naming the service. A 500 would read as a bug in the
+    // gateway and hide which service is missing.
+    const svc = new ProxyService({ commerce: 'http://commerce:3001' }, stubFetch());
+    await expect(svc.forward(req({ originalUrl: '/ads/campaigns' }))).rejects.toMatchObject({
+      status: 503,
+      message: 'no upstream configured for ads',
+    });
+  });
+
+  it('answers 502 when the owning service cannot be reached', async () => {
+    // A dead upstream (DNS failure, refused connection, timeout) is reported as
+    // a bad gateway rather than escaping as an unhandled rejection.
+    const dead: FetchLike = async () => {
+      throw new Error('ECONNREFUSED');
+    };
+    const svc = new ProxyService(UPSTREAMS, dead);
+    await expect(svc.forward(req())).rejects.toMatchObject({
+      status: 502,
+      message: 'upstream commerce could not be reached',
+    });
+  });
+
   it('passes an upstream error status and body through untouched', async () => {
     const svc = new ProxyService(
       UPSTREAMS,
