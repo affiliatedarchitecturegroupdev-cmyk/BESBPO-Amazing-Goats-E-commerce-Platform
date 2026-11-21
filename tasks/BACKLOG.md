@@ -1,5 +1,5 @@
 # Backlog
-Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 monetise and scale, 4 range and storefront depth, 5 launch readiness.
+Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 monetise and scale, 4 range and storefront depth, 5 launch readiness, 6 growth, content and experience.
 
 | ID | Title | Phase | Agent | Gate |
 |---|---|---|---|---|
@@ -68,3 +68,16 @@ Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 
 | T-065 | Logistics: implement proof of delivery (read, capture, temperature) — done | 5 | backend | none |
 | T-066 | Driver PWA: IndexedDB offline queue and day-close — done | 5 | frontend | none |
 | T-067 | Infra: deploy the remaining front ends (trade, admin, driver, advertiser, partner) — done | 5 | devops | gate:infra |
+| T-068 | Notifications: Resend email transport, HTML bodies and delivery webhooks | 6 | backend | gate:outbound |
+| T-069 | Notifications: newsletter list, double opt-in, unsubscribe and campaign send | 6 | backend | gate:outbound |
+| T-070 | Commerce: ratings and reviews with verified-purchase rules and moderation | 6 | backend | gate:db |
+| T-071 | Commerce: content model and blog | 6 | backend | gate:db |
+| T-072 | Storefront: recipes from content, replacing the /recipes stub | 6 | frontend | none |
+| T-073 | Storefront: structured data and AI-era SEO | 6 | frontend | none |
+| T-074 | Gateway: grounded shopping assistant with refusal and citations | 6 | backend | gate:new-dependency |
+| T-075 | Storefront: social share, follow links and Open Graph completion | 6 | frontend | none |
+| T-076 | Commerce: allergen and nutrition data model and display | 6 | backend | gate:legal |
+| T-077 | Storefront: remaining public pages (delivery, produce, track, FAQ, 404) | 6 | frontend | none |
+| T-078 | Storefront: delivery-area checker and transparent delivery pricing | 6 | frontend | none |
+| T-079 | Commerce: wishlist, back-in-stock alerts and abandoned-cart recovery | 6 | backend | gate:outbound |
+| T-080 | All apps: accessibility and Core Web Vitals audit and fixes | 6 | qa | none |
