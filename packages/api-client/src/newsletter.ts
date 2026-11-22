@@ -5,6 +5,10 @@
  * the service answers `accepted` for every address, so a caller cannot use the
  * endpoint to enumerate subscribers. That is why `SubscribeResult` carries a
  * single field and not a status enum.
+ *
+ * The campaign types are prefixed `Newsletter…` because the advertiser portal
+ * already owns `CampaignStatus` for ad campaigns, and two different state
+ * machines under one name is a bug waiting to happen.
  */
 
 export type SubscriberStatus = 'pending' | 'confirmed' | 'unsubscribed' | 'bounced' | 'complained';
@@ -23,36 +27,41 @@ export interface SubscribeResult {
   status: 'accepted';
 }
 
-export type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'cancelled';
+export type NewsletterCampaignStatus =
+  | 'draft'
+  | 'scheduled'
+  | 'sending'
+  | 'sent'
+  | 'cancelled';
 
-export interface CampaignView {
+export interface NewsletterCampaignView {
   id: string;
   subject: string;
-  status: CampaignStatus;
+  status: NewsletterCampaignStatus;
   scheduledFor?: string;
   sentAt?: string;
   createdBy: string;
   createdAt: string;
 }
 
-export type SendOutcome = 'sent' | 'suppressed' | 'failed' | 'skipped';
+export type NewsletterSendOutcome = 'sent' | 'suppressed' | 'failed' | 'skipped';
 
-export interface CampaignSendView {
+export interface NewsletterCampaignSendView {
   campaignId: string;
   subscriberId: string;
-  outcome: SendOutcome;
+  outcome: NewsletterSendOutcome;
   reason: string;
   at: string;
 }
 
-export interface CampaignTickResult {
+export interface NewsletterCampaignTickResult {
   campaignId: string;
   attempted: number;
   sent: number;
   suppressed: number;
   failed: number;
   remaining: number;
-  status: CampaignStatus;
+  status: NewsletterCampaignStatus;
 }
 
 /** The three public newsletter routes, so a client does not build a URL by hand. */
