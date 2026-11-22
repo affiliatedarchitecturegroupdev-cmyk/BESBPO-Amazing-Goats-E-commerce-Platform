@@ -392,3 +392,4 @@ export * from './view-models';
 export * from './staff-types';
 
 export * from './newsletter';
+export * from './reviews';

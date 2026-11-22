@@ -5,7 +5,7 @@ export const PERMISSIONS = [
   'routes:read','routes:manage','delivery:execute',
   'credit:read','credit:write','credit:approve','invoices:read','invoices:write',
   'payments:read','payments:reconcile','payouts:request','payouts:approve','procurement:manage',
-  'ads:read','ads:manage','ads:approve','merch:manage',
+  'ads:read','ads:manage','ads:approve','merch:manage','reviews:moderate',
   'users:read','users:manage','roles:manage','audit:read','pii:read','data:export',
   'infra:operate','system:break_glass','reports:read','support:manage',
   'partner:own','advertiser:own','customer:own','trade:own',
