@@ -81,6 +81,13 @@ its credentials are present, so a half-configured channel records `failed: no_tr
 rather than sending to a broken endpoint. Reads and manual sends are behind
 `support:manage`.
 
+## Newsletter
+
+The newsletter list, double opt-in, unsubscribe and paced campaign send live in
+`services/notifications/src/newsletter`; see `docs/18-newsletter.md`. It is
+deliberately separate from `notifications.consent`, because consent to an order
+confirmation is not consent to a newsletter.
+
 ## Routes
 
 - `GET /notifications/email`, `GET /notifications/whatsapp`, `GET /notifications/sms` — the dispatch log per channel.

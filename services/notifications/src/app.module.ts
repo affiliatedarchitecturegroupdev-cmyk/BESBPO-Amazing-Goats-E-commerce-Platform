@@ -8,6 +8,7 @@ import { EmailModule } from './email/email.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { SmsModule } from './sms/sms.module';
 import { DeliveryModule } from './delivery/delivery.module';
+import { NewsletterModule } from './newsletter/newsletter.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { DeliveryModule } from './delivery/delivery.module';
     WhatsappModule,
     SmsModule,
     DeliveryModule,
+    NewsletterModule,
   ],
   controllers: [HealthController],
   providers: [
