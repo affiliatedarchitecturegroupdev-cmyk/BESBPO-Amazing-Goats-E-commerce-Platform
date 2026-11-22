@@ -5,12 +5,14 @@ import { notFound } from 'next/navigation';
 import { CutoffBanner } from '../../../components/CutoffBanner';
 import { AddToCartButton } from '../../../components/AddToCartButton';
 import { FulfilmentTag, Badges, SponsoredSlot } from '../../../components/FulfilmentTag';
+import { JsonLd } from '../../../components/JsonLd';
 import { ProductCard } from '../../../components/ProductCard';
 import { formatRand } from '../../../lib/format';
-import { badgesFor } from '../../../lib/catalog';
+import { badgesFor, CATEGORIES } from '../../../lib/catalog';
+import { breadcrumbJsonLd, productJsonLd, productTrail } from '../../../lib/jsonld';
 import { cutoffMessage } from '../../../lib/fulfilment';
 import { loadCatalogue } from '../../../lib/gateway';
-import { pageMetadata } from '../../../lib/seo';
+import { pageMetadata, siteUrl } from '../../../lib/seo';
 
 // The catalogue is live, so the page renders per request.
 export const dynamic = 'force-dynamic';
@@ -41,9 +43,30 @@ export default async function ProductSlugPage({ params }: { params: { slug: stri
   const v = items.find((i) => i.id === params.slug || i.sku === params.slug);
   if (!v) notFound();
   const related = items.filter((i) => i.category === v.category && i.id !== v.id).slice(0, 3);
+  const path = `/product/${params.slug}`;
+  const trail = productTrail({ name: v.name, path, categorySlug: v.category }, CATEGORIES);
+
+  // No `aggregateRating`: the storefront has no rating source it can key by SKU
+  // (reviews are stored against a variant UUID), and marking up a rating the
+  // page does not show is a spam signal. It is added when the read path lands.
+  const product = productJsonLd({
+    name: v.name,
+    sku: v.sku,
+    url: `${siteUrl()}${path}`,
+    description: `${v.name} (${v.pack}) from Amazing Goats — farm-direct and delivered on the weekly cycle.`,
+    category: trail.categoryLabel,
+    priceCents: v.priceCents,
+    fulfilment: v.fulfilment,
+  });
 
   return (
     <section>
+      <JsonLd
+        nodes={[
+          product,
+          breadcrumbJsonLd(trail.crumbs),
+        ]}
+      />
       <h1>{v.name}</h1>
       <div className="img" aria-label="Gallery: swipe" />
 

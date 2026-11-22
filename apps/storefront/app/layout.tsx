@@ -2,8 +2,10 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { SiteHeader } from '../components/SiteHeader';
+import { JsonLd } from '../components/JsonLd';
 import { SiteFooter } from '../components/SiteFooter';
 import { ServiceWorkerRegistrar } from '../components/ServiceWorkerRegistrar';
+import { contactFromEnv, organizationJsonLd } from '../lib/jsonld';
 import { SITE_DESCRIPTION, SITE_LOCALE, SITE_NAME, siteUrl } from '../lib/seo';
 
 // Site-wide metadata (T-064). `metadataBase` makes every relative canonical and
@@ -39,6 +41,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en-ZA">
       <body>
+        {/* Sitewide Organization (T-073): one node, so every page identifies the
+            business and its delivery area without repeating it per page. */}
+        <JsonLd nodes={[organizationJsonLd(contactFromEnv())]} />
         <SiteHeader />
         <main className="container">{children}</main>
         <SiteFooter />
