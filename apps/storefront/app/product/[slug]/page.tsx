@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { CutoffBanner } from '../../../components/CutoffBanner';
+import { DeliveryAreaCheck } from '../../../components/DeliveryAreaCheck';
 import { AddToCartButton } from '../../../components/AddToCartButton';
 import { FulfilmentTag, Badges, SponsoredSlot } from '../../../components/FulfilmentTag';
 import { JsonLd } from '../../../components/JsonLd';
@@ -86,6 +87,9 @@ export default async function ProductSlugPage({ params }: { params: { slug: stri
       </ul>
       <CutoffBanner message={cutoffMessage('cycle')} />
       <p className="p">Delivered chilled in an insulated branded box.</p>
+
+      {/* The area check answers "do you deliver to me" before checkout (T-078). */}
+      <DeliveryAreaCheck goodsTotalCents={v.priceCents ?? undefined} />
 
       <div className="row"><span>Subscribe and save</span><span>Off</span></div>
       {v.priceCents != null && v.fulfilment !== 'quote' ? (

@@ -20,5 +20,6 @@ import { SlotsModule } from '../slots/slots.module';
       inject: [{ token: AG_DB, optional: true }],
     },
   ],
+  exports: [ROUTE_STORE],
 })
 export class RoutesModule {}
