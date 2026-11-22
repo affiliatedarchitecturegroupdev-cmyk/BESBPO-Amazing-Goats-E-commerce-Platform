@@ -6,8 +6,11 @@ import { ZonesController } from './zones.controller';
 import { ZonesService, ZONE_STORE } from './zones.service';
 import { InMemoryZoneStore, ZoneStore } from './zones.store';
 import { PgZoneStore } from './zones.sql-store';
+import { RoutesModule } from '../routes/routes.module';
+import { SlotsModule } from '../slots/slots.module';
 
 @Module({
+  imports: [RoutesModule, SlotsModule],
   controllers: [ZonesController],
   providers: [
     ZonesService,

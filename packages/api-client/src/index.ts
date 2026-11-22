@@ -94,6 +94,38 @@ export interface CycleInfo {
   orderOpen: boolean;
 }
 
+/** The area a shopper asks about (T-078). A postal code is the strictest key. */
+export interface AreaQuery {
+  postalCode?: string;
+  suburb?: string;
+  /** The goods total, so the zone's free-over threshold can apply. */
+  goodsTotalCents?: number;
+}
+
+/** What a served area is told. */
+export interface ServedAreaCheck {
+  served: true;
+  zone: { id: number; code: string; name: string };
+  /** ISO instant of the next bookable slot, or null when none is scheduled. */
+  nextSlot: string | null;
+  feeCents: Money;
+  /** ISO instant of the public cut-off, from the shared cut-off engine. */
+  cutoffAt: string;
+  /** The delivery fee already includes VAT, so it is not taxed again. */
+  feeIncludesVat: true;
+  freeOverApplied: boolean;
+}
+
+/** What an unserved area is told, with a way to be notified when that changes. */
+export interface UnservedAreaCheck {
+  served: false;
+  area: string;
+  needsArea: boolean;
+  waitlist: { available: true };
+}
+
+export type AreaCheck = ServedAreaCheck | UnservedAreaCheck;
+
 /** A catalogue row the gateway returns for a merchandising tile (BFF `BffCatalogueItem`). */
 export interface MerchCatalogueItem extends CatalogueItem {
   categorySlug: string | null;
@@ -289,6 +321,22 @@ export function createClient(
       req<SearchResult>(`/commerce/catalog/search${query({ q, limit: opts.limit })}`),
     currentCycle: (productClass?: string) =>
       req<CycleInfo>(`/commerce/cycles/current${query({ productClass })}`),
+    // The waitlist is the newsletter list: consent is the gate, and an address
+    // already on it gets the same answer, so asking twice is harmless.
+    joinWaitlist: (email: string, source: string) =>
+      req<{ status: 'accepted' }>('/notifications/subscribe', {
+        method: 'POST',
+        body: JSON.stringify({ email, source }),
+      }),
+    // The delivery-area check: public, so a shopper asks before signing in.
+    areaCheck: (area: AreaQuery) =>
+      req<AreaCheck>(
+        `/logistics/zones/check${query({
+          postalCode: area.postalCode,
+          suburb: area.suburb,
+          goodsTotalCents: area.goodsTotalCents,
+        })}`,
+      ),
 
     // Cart and checkout.
     createOrder: (cart: CartInput) =>

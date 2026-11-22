@@ -4,6 +4,7 @@ import { ProductCard } from '../../components/ProductCard';
 import { SponsoredSlot } from '../../components/FulfilmentTag';
 import { cartTotals } from '../../lib/cart';
 import { groupByFulfilment, deliveryLine } from '../../lib/cart-groups';
+import { DeliveryAreaCheck } from '../../components/DeliveryAreaCheck';
 import { cartSession } from '../../lib/cart-session';
 import { updateCartQty, removeFromCart } from '../../lib/cart-actions';
 import { formatRand } from '../../lib/format';
@@ -84,6 +85,9 @@ export default async function CartPage({ searchParams }: { searchParams: { cart?
       ))}
 
       <SponsoredSlot slot="A7">Cross-sell: add charcoal</SponsoredSlot>
+
+      {/* Confirm the area against the cart's goods total, so free-over applies. */}
+      <DeliveryAreaCheck goodsTotalCents={totals.subtotalExVatCents} />
 
       <div className="row"><span>Subtotal</span><span>{formatRand(totals.subtotalExVatCents)}</span></div>
       <div className="row"><span>{delivery.label}</span><span>{formatRand(delivery.feeCents)}</span></div>
