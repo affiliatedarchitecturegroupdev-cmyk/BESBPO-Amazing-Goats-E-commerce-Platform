@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { RequirePermissions, userFromRequest } from '@ag/nest-auth';
 import { ContentService } from './content.service';
-import type { ContentView, CreateContentInput } from './content.service';
+import type { ContentView, CreateContentInput, RecipeSummary, RecipeView } from './content.service';
 import type { ContentKind, PublishActor } from './content.rules';
 import type { ContentItem } from './content.store';
 
@@ -29,6 +29,29 @@ export class ContentController {
       limit: limit ? Number(limit) : undefined,
       offset: offset ? Number(offset) : undefined,
     });
+  }
+
+  /**
+   * The recipe list and detail. Declared *before* `:slug` because Express matches
+   * routes in declaration order: with `:slug` first, `/commerce/content/recipes`
+   * would be read as a content item whose slug is "recipes" and 404.
+   */
+  @Get('recipes')
+  listRecipes(
+    @Query('taxonomy') taxonomy?: string | string[],
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ): Promise<RecipeSummary[]> {
+    return this.service.listPublishedRecipes({
+      taxonomy: taxonomyFrom(taxonomy),
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+    });
+  }
+
+  @Get('recipes/:slug')
+  getRecipe(@Param('slug') slug: string): Promise<RecipeView> {
+    return this.service.getPublishedRecipe(slug);
   }
 
   /** One published item by slug; a draft is a 404, not a 403. */

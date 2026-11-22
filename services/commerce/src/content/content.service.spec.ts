@@ -175,3 +175,133 @@ describe('public reads', () => {
     expect(view.html).not.toContain('<script>');
   });
 });
+
+const potjie = {
+  servings: 4,
+  prepMinutes: 30,
+  cookMinutes: 180,
+  ingredients: [{ quantity: '1 kg', item: 'lamb neck' }],
+  steps: [{ text: 'Brown the meat.' }, { text: 'Simmer for three hours.' }],
+};
+
+/** A recipe created and published, plus the service that holds it. */
+async function withPublishedRecipe() {
+  const { service, store } = setup();
+  const item = await service.create(
+    {
+      kind: 'recipe',
+      title: 'Lamb potjie',
+      summary: 'A three-hour potjie.',
+      bodyMd: '## The pot\n\nCast iron.',
+      taxonomy: ['lamb', 'winter'],
+      variantIds: ['variant-1'],
+      recipe: potjie,
+    },
+    at,
+  );
+  await service.publish(item.id, 'person', at);
+  return { service, store, item };
+}
+
+describe('recipe reads', () => {
+  it('lists a published recipe with a readable time label', async () => {
+    const { service } = await withPublishedRecipe();
+    const list = await service.listPublishedRecipes();
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({
+      slug: 'lamb-potjie',
+      title: 'Lamb potjie',
+      servings: 4,
+      timeLabel: '3 hr 30 min',
+    });
+  });
+
+  it('does not list a draft recipe', async () => {
+    const { service } = setup();
+    await service.create({ kind: 'recipe', title: 'Draft potjie', recipe: potjie }, at);
+    expect(await service.listPublishedRecipes()).toEqual([]);
+  });
+
+  it('does not list a published recipe that has no cookable detail', async () => {
+    const { service } = setup();
+    const item = await service.create({ kind: 'recipe', title: 'Empty recipe' }, at);
+    await service.publish(item.id, 'person', at);
+    expect(await service.listPublishedRecipes()).toEqual([]);
+  });
+
+  it('does not list a published post as a recipe', async () => {
+    const { service } = setup();
+    const item = await service.create({ kind: 'post', title: 'A blog post' }, at);
+    await service.publish(item.id, 'person', at);
+    expect(await service.listPublishedRecipes()).toEqual([]);
+  });
+
+  it('narrows the list by taxonomy', async () => {
+    const { service } = await withPublishedRecipe();
+    expect(await service.listPublishedRecipes({ taxonomy: ['winter'] })).toHaveLength(1);
+    expect(await service.listPublishedRecipes({ taxonomy: ['summer'] })).toEqual([]);
+  });
+
+  it('returns the full recipe by slug, with its products', async () => {
+    const { service } = await withPublishedRecipe();
+    const recipe = await service.getPublishedRecipe('lamb-potjie');
+    expect(recipe.ingredients).toEqual([{ quantity: '1 kg', item: 'lamb neck' }]);
+    expect(recipe.steps).toHaveLength(2);
+    expect(recipe.variantIds).toEqual(['variant-1']);
+    expect(recipe.seo.seoTitle).toBeTruthy();
+    expect(recipe.html).toContain('Cast iron.');
+  });
+
+  it('404s an unknown recipe slug', async () => {
+    const { service } = setup();
+    await expect(service.getPublishedRecipe('nothing-here')).rejects.toThrow('no such recipe');
+  });
+
+  it('404s a draft recipe rather than confirming it exists', async () => {
+    const { service } = setup();
+    await service.create({ kind: 'recipe', title: 'Secret potjie', recipe: potjie }, at);
+    await expect(service.getPublishedRecipe('secret-potjie')).rejects.toThrow('no such recipe');
+  });
+
+  it('404s a published recipe with no detail instead of rendering an empty shell', async () => {
+    const { service } = setup();
+    const item = await service.create({ kind: 'recipe', title: 'Half written' }, at);
+    await service.publish(item.id, 'person', at);
+    await expect(service.getPublishedRecipe('half-written')).rejects.toThrow('no such recipe');
+  });
+
+  it('404s a published post read through the recipe route', async () => {
+    const { service } = setup();
+    const item = await service.create({ kind: 'post', title: 'Just a post' }, at);
+    await service.publish(item.id, 'person', at);
+    await expect(service.getPublishedRecipe('just-a-post')).rejects.toThrow('no such recipe');
+  });
+
+  it('replaces the detail when a draft is patched', async () => {
+    const { service } = setup();
+    const item = await service.create({ kind: 'recipe', title: 'Potjie', recipe: potjie }, at);
+    await service.patch(
+      item.id,
+      { recipe: { ...potjie, servings: 8, steps: [{ text: 'Feed a crowd.' }] } },
+      at,
+    );
+    await service.publish(item.id, 'person', at);
+    const recipe = await service.getPublishedRecipe('potjie');
+    expect(recipe.servings).toBe(8);
+    expect(recipe.steps).toEqual([{ text: 'Feed a crowd.' }]);
+  });
+
+  it('does not leak the recipe detail onto the content row', async () => {
+    const { service } = setup();
+    const item = await service.create({ kind: 'recipe', title: 'Potjie', recipe: potjie }, at);
+    const patched = await service.patch(item.id, { recipe: potjie }, at);
+    expect(patched).not.toHaveProperty('recipe');
+  });
+
+  it('serves a recipe through the generic content read as well', async () => {
+    const { service } = await withPublishedRecipe();
+    const view = await service.getPublishedBySlug('lamb-potjie');
+    expect(view.kind).toBe('recipe');
+    expect(view.variantIds).toEqual(['variant-1']);
+  });
+});

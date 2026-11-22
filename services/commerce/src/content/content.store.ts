@@ -1,5 +1,6 @@
 import { matchesTaxonomy } from './content.rules';
 import type { ContentKind, ContentStatus } from './content.rules';
+import type { RecipeDetail } from './recipe.rules';
 
 export interface ContentItem {
   id: string;
@@ -38,10 +39,20 @@ export interface ContentStore {
   list(query: ContentListQuery): Promise<ContentItem[]>;
   /** Slugs already in use, for collision-free generation. */
   slugs(): Promise<string[]>;
+
+  /** The recipe detail for a content row, if it has one. A `post` or `guide`
+   * has none, so `undefined` is the ordinary answer rather than an error. */
+  recipeDetail(contentId: string): Promise<RecipeDetail | undefined>;
+  /** Details for a page of recipes in one read, so the list page does not issue
+   * a query per card. Ids with no detail are simply absent from the map. */
+  recipeDetails(contentIds: string[]): Promise<Map<string, RecipeDetail>>;
+  /** Attach or replace a recipe's detail. Only a `recipe` kind carries one. */
+  saveRecipeDetail(contentId: string, detail: RecipeDetail): Promise<RecipeDetail>;
 }
 
 export class InMemoryContentStore implements ContentStore {
   private readonly rows = new Map<string, ContentItem>();
+  private readonly recipes = new Map<string, RecipeDetail>();
 
   async create(item: ContentItem): Promise<ContentItem> {
     this.rows.set(item.id, item);
@@ -73,5 +84,23 @@ export class InMemoryContentStore implements ContentStore {
 
   async slugs(): Promise<string[]> {
     return [...this.rows.values()].map((r) => r.slug);
+  }
+
+  async recipeDetail(contentId: string): Promise<RecipeDetail | undefined> {
+    return this.recipes.get(contentId);
+  }
+
+  async recipeDetails(contentIds: string[]): Promise<Map<string, RecipeDetail>> {
+    const found = new Map<string, RecipeDetail>();
+    for (const id of contentIds) {
+      const detail = this.recipes.get(id);
+      if (detail) found.set(id, detail);
+    }
+    return found;
+  }
+
+  async saveRecipeDetail(contentId: string, detail: RecipeDetail): Promise<RecipeDetail> {
+    this.recipes.set(contentId, detail);
+    return detail;
   }
 }

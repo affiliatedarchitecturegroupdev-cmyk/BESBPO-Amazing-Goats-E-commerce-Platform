@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { ApiError, createClient, type ApiClient, type CatalogueFilters, type PublicZoneTable, type ResolvedSection } from '@ag/api-client';
+import { ApiError, createClient, type ApiClient, type CatalogueFilters, type PublicZoneTable, type RecipeSummary, type RecipeView, type ResolvedSection } from '@ag/api-client';
 import { toStorefrontItems, type StorefrontItem } from './catalog';
 import type { ServedAd } from './placements';
 
@@ -111,5 +111,34 @@ export async function loadSections(page = 'home'): Promise<ResolvedSection[]> {
     return res.sections;
   } catch {
     return [];
+  }
+}
+
+/**
+ * The published recipes, for the list page (T-072). A failed read is reported as
+ * an error with an empty list, so the page shows "the kitchen is having trouble"
+ * rather than an empty state that looks like there are no recipes at all.
+ */
+export async function loadRecipes(
+  query: { taxonomy?: string[]; limit?: number } = {},
+): Promise<Loaded<RecipeSummary[]>> {
+  try {
+    return { data: await gatewayClient().recipes(query) };
+  } catch (err) {
+    return { data: [], error: message(err) };
+  }
+}
+
+/**
+ * One recipe by slug. A 404 is `undefined` rather than an error, because the
+ * detail page answers it with `notFound()` — the shop is fine, the recipe is
+ * simply not there — while a network failure is an error the page must show.
+ */
+export async function loadRecipe(slug: string): Promise<Loaded<RecipeView | undefined>> {
+  try {
+    return { data: await gatewayClient().recipe(slug) };
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return { data: undefined };
+    return { data: undefined, error: message(err) };
   }
 }

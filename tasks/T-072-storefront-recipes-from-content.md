@@ -17,15 +17,15 @@ with this", they carry `Recipe` structured data (the richest schema available to
 food site), and they are what the assistant needs to answer cooking questions.
 
 ## Acceptance
-- [ ] Migration adds `catalog.content_recipes (content_id, servings, prep_minutes, cook_minutes, ingredients jsonb, steps jsonb)`
-- [ ] `/recipes` lists published recipe content with hero image, title and cook time; no placeholder text remains
-- [ ] `/recipes/[slug]` renders one recipe: ingredients, numbered steps, servings and times, and the products it uses with add-to-cart
-- [ ] A recipe page links to the products it is about (`content_products`), so reading converts to buying
-- [ ] `pageMetadata` applied per recipe, with the recipe title and summary
+- [x] Migration adds `catalog.content_recipes (content_id, servings, prep_minutes, cook_minutes, ingredients jsonb, steps jsonb)`
+- [x] `/recipes` lists published recipe content with hero image, title and cook time; no placeholder text remains
+- [x] `/recipes/[slug]` renders one recipe: ingredients, numbered steps, servings and times, and the products it uses with add-to-cart
+- [x] A recipe page links to the products it is about (`content_products`), so reading converts to buying
+- [x] `pageMetadata` applied per recipe, with the recipe title and summary
 - [ ] `Recipe` JSON-LD emitted once T-073 lands; this card leaves the object available and does not duplicate the generator
-- [ ] Empty state when no recipes are published: a real message, not a broken page
-- [ ] The stub `TODO(agent)` comment is removed
-- [ ] Tests added and passing: list, detail, missing slug 404, empty state
+- [x] Empty state when no recipes are published: a real message, not a broken page
+- [x] The stub `TODO(agent)` comment is removed
+- [x] Tests added and passing: list, detail, missing slug 404, empty state
 
 ## Notes
 Depends on T-071 for the content model. Keeps the storefront's existing read pattern

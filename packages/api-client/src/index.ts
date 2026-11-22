@@ -8,6 +8,8 @@ import type {
   Temperature,
   Variant,
 } from '@ag/shared-types';
+import type { ContentListQuery, ContentView, RecipeSummary, RecipeView } from './content';
+import { contentListPath, contentPath, recipePath, recipesPath } from './content';
 import type {
   AdReport,
   AuditRecord,
@@ -445,6 +447,16 @@ export function createClient(
         method: 'POST',
         body: JSON.stringify({ events }),
       }),
+
+    // Content and recipes (T-071, T-072). Recipes are content of kind `recipe`
+    // with a detail row, served from the same service; the storefront reads them
+    // through the gateway like every other page.
+    content: (query: ContentListQuery = {}) =>
+      req<ContentView[]>(contentListPath(query)),
+    contentItem: (slug: string) => req<ContentView>(contentPath(slug)),
+    recipes: (query: { taxonomy?: string[]; limit?: number; offset?: number } = {}) =>
+      req<RecipeSummary[]>(recipesPath(query)),
+    recipe: (slug: string) => req<RecipeView>(recipePath(slug)),
 
     // Proof of delivery: capture at the stop, and read the proof of a stop.
     captureProof: (stopId: string, body: ProofCaptureInput) =>
