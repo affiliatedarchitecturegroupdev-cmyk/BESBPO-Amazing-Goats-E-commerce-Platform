@@ -597,6 +597,9 @@ importers:
       '@ag/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@ag/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
       '@ag/rbac':
         specifier: workspace:*
         version: link:../../packages/rbac

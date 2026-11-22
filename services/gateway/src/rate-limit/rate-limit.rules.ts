@@ -41,10 +41,28 @@ export const ROUTE_RULES: RateLimitRules = {
   'GET /gateway/bff/home': { refillPerSec: 10, burst: 40 },
   'GET /gateway/bff/catalogue': { refillPerSec: 10, burst: 40 },
   'GET /gateway/bff/openapi': { refillPerSec: 1, burst: 5 },
+  // The assistant costs a model call and reads several upstreams, so it is
+  // limited per session here rather than at the provider (ADR 0013 s4).
+  'POST /gateway/assistant': { refillPerSec: 0.2, burst: 5 },
+  'GET /gateway/assistant/conversations': { refillPerSec: 1, burst: 10 },
 };
 
+/**
+ * The rule for a route. An exact key wins; otherwise the longest prefix of the
+ * path that has a rule is used, so a route with a path parameter
+ * (`/gateway/assistant/conversations/:id`) is governed by the rule written for
+ * its collection rather than silently falling back to the default.
+ */
 export function ruleFor(rules: RateLimitRules, routeKey: string): RateLimitRule {
-  return rules[routeKey] ?? DEFAULT_RULE;
+  const exact = rules[routeKey];
+  if (exact) return exact;
+  const [method, path = ''] = routeKey.split(' ');
+  const segments = path.split('/').filter((s) => s.length > 0);
+  for (let take = segments.length - 1; take > 0; take -= 1) {
+    const candidate = rules[`${method} /${segments.slice(0, take).join('/')}`];
+    if (candidate) return candidate;
+  }
+  return DEFAULT_RULE;
 }
 
 /** A fresh, full bucket for a caller we have not seen before. */
