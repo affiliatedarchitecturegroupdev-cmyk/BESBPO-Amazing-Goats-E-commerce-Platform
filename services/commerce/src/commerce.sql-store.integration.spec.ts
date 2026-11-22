@@ -61,8 +61,12 @@ async function cleanFixtures(): Promise<void> {
   await admin!.query(`DELETE FROM catalog.price_list_items WHERE price_list_id IN
     (SELECT id FROM catalog.price_lists WHERE external_id LIKE 'it_pl_%')`);
   await admin!.query(`DELETE FROM catalog.price_lists WHERE external_id LIKE 'it_pl_%'`);
-  await admin!.query(`DELETE FROM catalog.variants WHERE sku LIKE 'IT-%'`);
-  await admin!.query(`DELETE FROM catalog.products WHERE slug LIKE 'it-%'`);
+  // Prefix `IT-CM-%`, not `IT-%`: the merchandising spec seeds `IT-MCH-%`
+  // variants, and a shared database means a broad delete here removes its rows
+  // while `catalog.merch_items` still references them, so that spec's cleanup
+  // then fails on a foreign key that is nothing to do with commerce.
+  await admin!.query(`DELETE FROM catalog.variants WHERE sku LIKE 'IT-CM-%' OR sku = 'IT-NEW-001'`);
+  await admin!.query(`DELETE FROM catalog.products WHERE slug IN ('it-chilled', 'it-new')`);
   await admin!.query(`DELETE FROM catalog.product_lines WHERE code = 'ITC'`);
   await admin!.query(`DELETE FROM identity.users WHERE id IN ('${USER_A}', '${USER_B}')`);
   await admin!.query(`DELETE FROM identity.orgs WHERE id IN ('${ORG_A}', '${ORG_B}')`);
