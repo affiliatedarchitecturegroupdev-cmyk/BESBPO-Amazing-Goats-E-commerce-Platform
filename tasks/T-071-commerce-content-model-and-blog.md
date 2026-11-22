@@ -19,17 +19,17 @@ One model serves blog posts, recipes and buying guides (ADR 0013 §1), because t
 share a shape and all link to products.
 
 ## Acceptance
-- [ ] Migration adds `catalog.content` (`kind` in `post|recipe|guide`, `slug` unique, `title`, `summary`, `body_md`, `author_user_id`, `status` in `draft|review|published|archived`, `published_at`, `hero_image_url`, `seo_title`, `seo_description`, `taxonomy text[]`, timestamps)
-- [ ] Migration adds `catalog.content_products (content_id, variant_id)` linking a post to the products it is about
-- [ ] `GET /commerce/content?kind=&taxonomy=&status=published` — public list, published only, paginated
-- [ ] `GET /commerce/content/:slug` — one published item, or 404
-- [ ] `POST /commerce/content`, `PATCH /commerce/content/:id` — authoring, behind `content:write`
-- [ ] `POST /commerce/content/:id/publish` — behind `content:publish`; an agent may move `draft → review`, only a person moves `review → published` (ADR 0013 §1)
-- [ ] Markdown renders to HTML through one pure function, sanitised, tested against script injection and raw HTML
-- [ ] Slug generation is deterministic from the title and collision-safe
-- [ ] A published item's `seo_title` / `seo_description` fall back to `title` / `summary` rather than rendering empty tags
-- [ ] `content:write` and `content:publish` added to the permission list and to the `marketing` role in the RBAC matrix
-- [ ] Tests added and passing: publish workflow, published-only public reads, sanitisation, slug collisions, 404 for drafts
+- [x] Migration adds `catalog.content` (`kind` in `post|recipe|guide`, `slug` unique, `title`, `summary`, `body_md`, `author_user_id`, `status` in `draft|review|published|archived`, `published_at`, `hero_image_url`, `seo_title`, `seo_description`, `taxonomy text[]`, timestamps)
+- [x] Migration adds `catalog.content_products (content_id, variant_id)` linking a post to the products it is about
+- [x] `GET /commerce/content?kind=&taxonomy=&status=published` — public list, published only, paginated
+- [x] `GET /commerce/content/:slug` — one published item, or 404
+- [x] `POST /commerce/content`, `PATCH /commerce/content/:id` — authoring, behind `content:write`
+- [x] `POST /commerce/content/:id/publish` — behind `content:publish`; an agent may move `draft → review`, only a person moves `review → published` (ADR 0013 §1)
+- [x] Markdown renders to HTML through one pure function, sanitised, tested against script injection and raw HTML
+- [x] Slug generation is deterministic from the title and collision-safe
+- [x] A published item's `seo_title` / `seo_description` fall back to `title` / `summary` rather than rendering empty tags
+- [x] `content:write` and `content:publish` added to the permission list and to the `marketing` role in the RBAC matrix
+- [x] Tests added and passing: publish workflow, published-only public reads, sanitisation, slug collisions, 404 for drafts
 
 ## Notes
 Gate is `gate:db` (new migration) and touches RBAC.
