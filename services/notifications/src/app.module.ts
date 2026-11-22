@@ -7,9 +7,17 @@ import { DispatchModule } from './dispatch/dispatch.module';
 import { EmailModule } from './email/email.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { SmsModule } from './sms/sms.module';
+import { DeliveryModule } from './delivery/delivery.module';
 
 @Module({
-  imports: [PersistenceModule, DispatchModule, EmailModule, WhatsappModule, SmsModule],
+  imports: [
+    PersistenceModule,
+    DispatchModule,
+    EmailModule,
+    WhatsappModule,
+    SmsModule,
+    DeliveryModule,
+  ],
   controllers: [HealthController],
   providers: [
     { provide: APP_GUARD, useClass: PermissionsGuard },

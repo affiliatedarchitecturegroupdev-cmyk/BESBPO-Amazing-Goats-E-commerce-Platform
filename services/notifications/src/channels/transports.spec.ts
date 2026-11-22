@@ -77,6 +77,26 @@ describe('transportsFromEnv', () => {
     ).toEqual(['email']);
   });
 
+  it('prefers Resend for email when its API key is set', () => {
+    const transports = transportsFromEnv({ RESEND_API_KEY: 're_test' });
+    expect(transports.map((t) => t.channel)).toEqual(['email']);
+    expect(transports[0].constructor.name).toBe('ResendTransport');
+  });
+
+  it('falls back to the generic provider when only EMAIL_API_URL is set', () => {
+    const transports = transportsFromEnv({ EMAIL_API_URL: 'https://mail.example', EMAIL_API_KEY: 'k' });
+    expect(transports[0].constructor.name).toBe('HttpTransport');
+  });
+
+  it('does not register email twice when both providers are configured', () => {
+    const channels = transportsFromEnv({
+      RESEND_API_KEY: 're_test',
+      EMAIL_API_URL: 'https://mail.example',
+      EMAIL_API_KEY: 'k',
+    }).map((t) => t.channel);
+    expect(channels).toEqual(['email']);
+  });
+
   it('registers WhatsApp when its phone number id and token are set', () => {
     const channels = transportsFromEnv({
       WHATSAPP_PHONE_NUMBER_ID: '123',

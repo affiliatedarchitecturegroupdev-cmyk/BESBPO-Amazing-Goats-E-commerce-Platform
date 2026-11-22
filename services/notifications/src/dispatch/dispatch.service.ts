@@ -13,7 +13,7 @@ export interface SendInput {
   templateKey: string;
   kind: 'transactional' | 'marketing';
   recipient: Recipient;
-  message: { channel: Channel; subject?: string; body: string };
+  message: { channel: Channel; subject?: string; body: string; kind?: 'transactional' | 'marketing' };
 }
 
 @Injectable()
