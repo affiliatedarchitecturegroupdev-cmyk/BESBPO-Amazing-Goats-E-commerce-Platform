@@ -17,7 +17,7 @@ export const MATRIX: Record<Role, Permission[]> = {
   dispatch: ['routes:read','routes:manage','orders:read','pii:read'],
   driver: ['delivery:execute','routes:read'],
   quality: ['stock:read','batches:release','batches:recall','catalog:read','reports:read'],
-  marketing: ['ads:read','ads:manage','ads:approve','merch:manage','catalog:read','reports:read'],
+  marketing: ['ads:read','ads:manage','ads:approve','merch:manage','catalog:read','reports:read','content:read','content:write','content:publish'],
   support: ['orders:read','orders:write','refunds:request','support:manage','pii:read','reviews:moderate'],
   developer: ['catalog:read','reports:read','audit:read'],
   devops: ['infra:operate','audit:read','reports:read','system:break_glass'],

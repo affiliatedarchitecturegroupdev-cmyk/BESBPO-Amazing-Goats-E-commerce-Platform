@@ -393,3 +393,4 @@ export * from './staff-types';
 
 export * from './newsletter';
 export * from './reviews';
+export * from './content';
