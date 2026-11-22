@@ -390,3 +390,5 @@ export type ApiClient = ReturnType<typeof createClient>;
 
 export * from './view-models';
 export * from './staff-types';
+
+export * from './newsletter';

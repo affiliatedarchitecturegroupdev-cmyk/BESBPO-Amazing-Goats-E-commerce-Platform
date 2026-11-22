@@ -18,16 +18,16 @@ newsletter; merging them silently converts transactional recipients into a marke
 list, which POPIA s18 and CPA s11 penalise (ADR 0013 §3).
 
 ## Acceptance
-- [ ] Migration adds `notifications.subscribers` (`email`, `status` in `pending|confirmed|unsubscribed|bounced|complained`, `confirm_token`, `confirmed_at`, `unsubscribed_at`, `source`, `ip_hash`, timestamps) with a unique index on lower(email)
-- [ ] Migration adds `notifications.campaigns` (`subject`, `body_md`, `status` in `draft|scheduled|sending|sent|cancelled`, `scheduled_for`, `sent_at`, `created_by`) and `notifications.campaign_sends` (one row per recipient with outcome and reason)
-- [ ] `POST /notifications/subscribe` accepts an address, always returns 202 regardless of whether it was already subscribed, and sends a confirm email only for `pending` — no address enumeration
-- [ ] `GET /notifications/subscribe/confirm?token=` moves `pending → confirmed` and renders a plain confirmation page
-- [ ] `GET /notifications/unsubscribe?token=` works with no session and no login, moves the subscriber to `unsubscribed`, and is idempotent
-- [ ] Every marketing message carries the unsubscribe link; `decideConsent` is still the gate, and a `pending` subscriber receives nothing marketing
-- [ ] Campaign send is paced (a bounded batch per tick) and resumable, so a failure mid-send does not double-send or strand the rest
-- [ ] A `bounced` or `complained` subscriber is skipped by every later campaign
-- [ ] `ip_hash` is a salted hash, not the raw address (POPIA minimisation)
-- [ ] Tests added and passing: double opt-in, no enumeration, idempotent unsubscribe, pacing, bounce skip
+- [x] Migration adds `notifications.subscribers` (`email`, `status` in `pending|confirmed|unsubscribed|bounced|complained`, `confirm_token`, `confirmed_at`, `unsubscribed_at`, `source`, `ip_hash`, timestamps) with a unique index on lower(email)
+- [x] Migration adds `notifications.campaigns` (`subject`, `body_md`, `status` in `draft|scheduled|sending|sent|cancelled`, `scheduled_for`, `sent_at`, `created_by`) and `notifications.campaign_sends` (one row per recipient with outcome and reason)
+- [x] `POST /notifications/subscribe` accepts an address, always returns 202 regardless of whether it was already subscribed, and sends a confirm email only for `pending` — no address enumeration
+- [x] `GET /notifications/subscribe/confirm?token=` moves `pending → confirmed` and renders a plain confirmation page
+- [x] `GET /notifications/unsubscribe?token=` works with no session and no login, moves the subscriber to `unsubscribed`, and is idempotent
+- [x] Every marketing message carries the unsubscribe link; `decideConsent` is still the gate, and a `pending` subscriber receives nothing marketing
+- [x] Campaign send is paced (a bounded batch per tick) and resumable, so a failure mid-send does not double-send or strand the rest
+- [x] A `bounced` or `complained` subscriber is skipped by every later campaign
+- [x] `ip_hash` is a salted hash, not the raw address (POPIA minimisation)
+- [x] Tests added and passing: double opt-in, no enumeration, idempotent unsubscribe, pacing, bounce skip
 
 ## Notes
 Gate is `gate:outbound`. Depends on T-068 for the transport and the webhook that
