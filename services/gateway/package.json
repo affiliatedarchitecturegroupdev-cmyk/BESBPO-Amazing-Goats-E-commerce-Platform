@@ -14,6 +14,7 @@
   "dependencies": {
     "@ag/nest-auth": "workspace:*",
     "@ag/observability": "workspace:*",
+    "@ag/policy": "workspace:*",
     "@ag/rbac": "workspace:*",
     "@ag/shared-types": "workspace:*",
     "@nestjs/common": "^10.4.0",

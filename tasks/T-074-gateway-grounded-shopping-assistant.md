@@ -18,18 +18,18 @@ commercial one (a quoted wrong price). ADR 0013 §4 fixes the rules; this card
 implements them.
 
 ## Acceptance
-- [ ] `services/gateway/src/assistant/` module — no new deployable (ADR 0002)
-- [ ] `AnswerModel` interface with one hosted-LLM implementation and one canned test implementation, so the assistant is testable with no network
-- [ ] Retrieval over: catalogue rows (name, price, pack, availability), cycle cut-off data, delivery zones, published content (T-071/T-072), and the legal pages
-- [ ] **Prices are never model output.** The model returns selected SKUs; code reads the row and formats with `formatZar`. A test asserts a price question returns exactly the catalogue value
-- [ ] No retrieved fact → a fixed refusal constant naming a human channel, never improvised text
-- [ ] Every answer cites the product or page it drew from, as a link
-- [ ] Delivery dates come from the cut-off engine, never from the model
-- [ ] `POST /gateway/assistant` accepts a question and a conversation id, returns `{answer, citations[], refused}`
-- [ ] Conversation log records the retrieved fact ids so a disputed answer can be reconstructed; readable only with `audit:read`; retention per `docs/02-access-control.md`
-- [ ] Rate limited per session, and the rate limit is on the gateway, not the model provider
-- [ ] Prompt-injection resistant: a question containing instructions to ignore the rules or reveal the prompt gets the refusal, not compliance
-- [ ] Tests added and passing: price equality, refusal on unknown, citation presence, injection attempt, rate limit, log redaction
+- [x] `services/gateway/src/assistant/` module — no new deployable (ADR 0002)
+- [x] `AnswerModel` interface with one hosted-LLM implementation and one canned test implementation, so the assistant is testable with no network
+- [x] Retrieval over: catalogue rows (name, price, pack, availability), cycle cut-off data, delivery zones, published content (T-071/T-072), and the legal pages
+- [x] **Prices are never model output.** The model returns selected SKUs; code reads the row and formats with `formatZar`. A test asserts a price question returns exactly the catalogue value
+- [x] No retrieved fact → a fixed refusal constant naming a human channel, never improvised text
+- [x] Every answer cites the product or page it drew from, as a link
+- [x] Delivery dates come from the cut-off engine, never from the model
+- [x] `POST /gateway/assistant` accepts a question and a conversation id, returns `{answer, citations[], refused}`
+- [x] Conversation log records the retrieved fact ids so a disputed answer can be reconstructed; readable only with `audit:read`; retention per `docs/02-access-control.md`
+- [x] Rate limited per session, and the rate limit is on the gateway, not the model provider
+- [x] Prompt-injection resistant: a question containing instructions to ignore the rules or reveal the prompt gets the refusal, not compliance
+- [x] Tests added and passing: price equality, refusal on unknown, citation presence, injection attempt, rate limit, log redaction
 
 ## Notes
 Gate is `gate:new-dependency` — this adds an LLM client and an outbound network call
