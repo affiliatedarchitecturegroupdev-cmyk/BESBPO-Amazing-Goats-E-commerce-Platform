@@ -2,10 +2,12 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { CutoffBanner } from '../../../components/CutoffBanner';
+import { JsonLd } from '../../../components/JsonLd';
 import { ProductCard } from '../../../components/ProductCard';
 import { ServedAdSlot } from '../../../components/FulfilmentTag';
 import { CATEGORIES, type StorefrontItem } from '../../../lib/catalog';
 import { adsForSlot, placeAds } from '../../../lib/placements';
+import { breadcrumbJsonLd } from '../../../lib/jsonld';
 import { cutoffMessage } from '../../../lib/fulfilment';
 import { loadAds, loadCatalogue } from '../../../lib/gateway';
 import { pageMetadata } from '../../../lib/seo';
@@ -40,6 +42,7 @@ export default async function ShopCategoryPage({ params }: { params: { category:
 
   return (
     <section>
+      <JsonLd nodes={[breadcrumbJsonLd([{ name: label, path: `/shop/${params.category}` }])]} />
       <h1>{label}</h1>
       {error && <p className="p" role="alert">{error}</p>}
       {sponsors.map((ad) => <ServedAdSlot key={ad.creativeId} ad={ad} />)}

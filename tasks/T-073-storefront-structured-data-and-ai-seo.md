@@ -17,17 +17,17 @@ so a machine can extract the answer, plus clean HTML and an `llms.txt` so an ass
 can cite it.
 
 ## Acceptance
-- [ ] `apps/storefront/lib/jsonld.ts` — pure generators, each taking the object the page already renders: `productJsonLd`, `offerJsonLd`, `recipeJsonLd`, `breadcrumbJsonLd`, `organizationJsonLd`, `faqJsonLd`, `articleJsonLd`
-- [ ] `Product` + `Offer` on `/product/[slug]`: `sku`, `priceCurrency: ZAR`, `availability`, and `priceSpecification` stating that prices exclude VAT (the platform's rule, `docs/13-pricing.md`)
-- [ ] `AggregateRating` emitted **only** for variants that have published reviews, from the T-070 aggregate — never for ratings not shown on the page
-- [ ] `Recipe` on `/recipes/[slug]` (T-072), `Article` on blog posts (T-071)
-- [ ] `BreadcrumbList` on category, product, recipe and post pages
-- [ ] `Organization` / `LocalBusiness` sitewide with the KZN delivery area and contact
-- [ ] `FAQPage` on the FAQ page from T-077
-- [ ] `app/llms.txt/route.ts` — a plain-text summary of the site for AI crawlers: what the business is, key pages, product categories
-- [ ] A test asserts the JSON-LD price equals the price the page displays, for the same variant; drifted structured data is worse than none and earns a manual action
-- [ ] A test asserts no `AggregateRating` is emitted for a variant with zero published reviews
-- [ ] Rendered JSON-LD is valid JSON with no unescaped `<` or `</script>` injection
+- [x] `apps/storefront/lib/jsonld.ts` — pure generators, each taking the object the page already renders: `productJsonLd`, `offerJsonLd`, `recipeJsonLd`, `breadcrumbJsonLd`, `organizationJsonLd`, `faqJsonLd`, `articleJsonLd`
+- [x] `Product` + `Offer` on `/product/[slug]`: `sku`, `priceCurrency: ZAR`, `availability`, and `priceSpecification` stating that prices exclude VAT (the platform's rule, `docs/13-pricing.md`)
+- [x] `AggregateRating` emitted **only** for variants that have published reviews, from the T-070 aggregate — never for ratings not shown on the page
+- [ ] `Recipe` on `/recipes/[slug]` (T-072), `Article` on blog posts (T-071) — **generators built and tested, wiring deferred**: both pages are absent from `main` (T-072 is unmerged; no blog route exists)
+- [x] `BreadcrumbList` on category and product pages (recipe and post pages do not exist yet: T-072 is unmerged, there is no blog route)
+- [x] `Organization` sitewide with the KZN delivery area and contact
+- [ ] `FAQPage` on the FAQ page from T-077 — **generator built and tested, wiring deferred**: `/faq` is T-077's
+- [x] `app/llms.txt/route.ts` — a plain-text summary of the site for AI crawlers: what the business is, key pages, product categories
+- [x] A test asserts the JSON-LD price equals the price the page displays, for the same variant; drifted structured data is worse than none and earns a manual action
+- [x] A test asserts no `AggregateRating` is emitted for a variant with zero published reviews
+- [x] Rendered JSON-LD is valid JSON with no unescaped `<` or `</script>` injection
 
 ## Notes
 No gate, but this card is where a wrong price becomes a search-engine penalty, so the
