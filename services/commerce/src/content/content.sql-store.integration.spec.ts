@@ -34,7 +34,6 @@ function asRole(url: string, role: string, password: string): string {
 }
 
 let app: PgDb | undefined;
-let variantId: string;
 
 async function dropRole(): Promise<void> {
   await admin!.query(
@@ -59,13 +58,11 @@ async function seedFixtures(): Promise<void> {
     `INSERT INTO catalog.products (line_id, slug, name) VALUES
        ((SELECT id FROM catalog.product_lines WHERE code = '${LINE}'), 'it-cnt', 'IT content product')`,
   );
-  const { rows } = await admin!.query<{ id: string }>(
+  await admin!.query(
     `INSERT INTO catalog.variants (product_id, sku, pack, unit, fulfilment, temperature, channel, phase, source_kind)
-     VALUES ((SELECT id FROM catalog.products WHERE slug = 'it-cnt'), $1, '1 kg', 'kg', 'in_stock', 'ambient', 'both', 1, 'test')
-     RETURNING id`,
+     VALUES ((SELECT id FROM catalog.products WHERE slug = 'it-cnt'), $1, '1 kg', 'kg', 'in_stock', 'ambient', 'both', 1, 'test')`,
     [SKU],
   );
-  variantId = rows[0].id;
 }
 
 const at = new Date('2026-03-01T08:00:00Z');
@@ -91,7 +88,7 @@ async function author(
       summary: `${title} summary`,
       bodyMd: '## Notes\n\nCast iron.',
       taxonomy: ['lamb'],
-      variantIds: [variantId],
+      variantIds: [SKU],
       recipe: recipeDetail,
     },
     at,
@@ -144,7 +141,7 @@ describe.skipIf(!admin)('content SQL adapter (integration)', () => {
       { text: 'Brown the meat.' },
       { text: 'Simmer for three hours.' },
     ]);
-    expect(recipe.variantIds).toEqual([variantId]);
+    expect(recipe.variantIds).toEqual([SKU]);
     expect(recipe.html).toContain('Cast iron.');
   });
 
@@ -163,6 +160,43 @@ describe.skipIf(!admin)('content SQL adapter (integration)', () => {
     const publicRead = await store.getBySlug(SLUG_DRAFT);
     expect(publicRead).toBeUndefined();
     expect(await store.recipeDetail(draft!.id)).toBeUndefined();
+  });
+
+  it('returns linked products as SKUs, the key the catalogue exposes as id', async () => {
+    const service = new ContentService(new PgContentStore(app!));
+    const recipe = await service.getPublishedRecipe('it-published-recipe');
+    expect(recipe.variantIds).toEqual([SKU]);
+
+    // The join that makes this a regression test: `CatalogueItem.id` is the SKU,
+    // so a recipe link that returned a variant UUID would match no product and
+    // the storefront's "shop this recipe" row would render empty without error.
+    const { rows } = await admin!.query<{ id: string }>(
+      `SELECT id FROM catalog.variants WHERE sku = $1`,
+      [SKU],
+    );
+    expect(recipe.variantIds).not.toContain(rows[0].id);
+  });
+
+  it('skips a link to a SKU that is not in the catalogue instead of failing the write', async () => {
+    const service = new ContentService(new PgContentStore(app!));
+    const item = await runWithSession({ staff: true }, () =>
+      service.create(
+        {
+          kind: 'recipe',
+          title: 'IT unknown sku recipe',
+          bodyMd: '',
+          taxonomy: [],
+          variantIds: ['IT-CNT-404'],
+          recipe: recipeDetail,
+        },
+        at,
+      ),
+    );
+    const stored = await runWithSession({ staff: true }, () =>
+      new PgContentStore(app!).getBySlug('it-unknown-sku-recipe'),
+    );
+    expect(stored?.variantIds).toEqual([]);
+    expect(item.variantIds).toEqual(['IT-CNT-404']);
   });
 
   it('replaces the detail and links when a draft is patched', async () => {

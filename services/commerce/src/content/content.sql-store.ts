@@ -42,6 +42,12 @@ const COLUMNS = `id, kind, slug, title, summary, body_md, author_user_id, status
  * Product links live in their own table, so `variantIds` is assembled from the
  * join rather than stored on the row: a variant can then be deleted without
  * leaving a dangling id in an array.
+ *
+ * `variantIds` holds SKUs, not `catalog.variants.id` UUIDs. The SKU is the
+ * catalogue's domain key (`CatalogueItem.id`, see `catalog.sql-store.ts`), so a
+ * recipe's links resolve against the same ids the storefront renders products
+ * with. Exposing UUIDs here would make every "shop this recipe" row match
+ * nothing, silently.
  */
 export class PgContentStore implements ContentStore {
   constructor(private readonly db: Db) {}
@@ -67,19 +73,22 @@ export class PgContentStore implements ContentStore {
     };
   }
 
-  /** The variant ids for a set of content rows, in one query. */
+  /** The linked SKUs for a set of content rows, in one query. */
   private async variantsFor(ids: string[]): Promise<Map<string, string[]>> {
     const out = new Map<string, string[]>();
     if (ids.length === 0) return out;
     const { rows } = await this.db.withSession(currentSession(), (tx) =>
-      tx.query<{ content_id: string; variant_id: string }>(
-        `SELECT content_id, variant_id FROM catalog.content_products WHERE content_id = ANY($1::uuid[])`,
+      tx.query<{ content_id: string; sku: string }>(
+        `SELECT cp.content_id, v.sku
+           FROM catalog.content_products cp
+           JOIN catalog.variants v ON v.id = cp.variant_id
+          WHERE cp.content_id = ANY($1::uuid[])`,
         [ids],
       ),
     );
     for (const row of rows) {
       const list = out.get(row.content_id) ?? [];
-      list.push(row.variant_id);
+      list.push(row.sku);
       out.set(row.content_id, list);
     }
     return out;
@@ -168,10 +177,9 @@ export class PgContentStore implements ContentStore {
   }
 
   /**
-   * Replace a content row's product links. `variantIds` may name a variant that
-   * has since been deleted; the join to `catalog.variants` skips it rather than
-   * failing the whole write, which matches how the merchandising store treats an
-   * unknown SKU.
+   * Replace a content row's product links. `variantIds` holds SKUs; a SKU that
+   * is not in the catalogue is skipped rather than failing the whole write,
+   * which matches how the merchandising store treats an unknown SKU.
    */
   private async replaceVariants(
     tx: Db,
@@ -179,11 +187,11 @@ export class PgContentStore implements ContentStore {
     variantIds: string[],
   ): Promise<void> {
     await tx.query(`DELETE FROM catalog.content_products WHERE content_id = $1`, [contentId]);
-    for (const variantId of variantIds) {
+    for (const sku of variantIds) {
       await tx.query(
         `INSERT INTO catalog.content_products (content_id, variant_id)
-         SELECT $1, v.id FROM catalog.variants v WHERE v.id = $2`,
-        [contentId, variantId],
+         SELECT $1, v.id FROM catalog.variants v WHERE v.sku = $2`,
+        [contentId, sku],
       );
     }
   }
