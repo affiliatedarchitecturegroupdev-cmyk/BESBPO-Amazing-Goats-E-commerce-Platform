@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { BadGatewayException, Inject, Injectable, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { userFromRequest, AuthOptions, AUTH_OPTIONS } from '@ag/nest-auth';
 import { isStaff } from '@ag/rbac';
 import { FetchLike, Upstreams } from '../bff/upstream';
@@ -26,11 +26,26 @@ export interface ProxyReply {
   body: unknown;
 }
 
-/** Raised when a request names a service the gateway has no address for. */
-export class UnknownUpstreamError extends Error {
+/**
+ * Raised when a request names a service the gateway has no address for. It is a
+ * `ServiceUnavailableException` so the caller gets a 503 naming the service
+ * rather than Nest's default 500 with a stack trace: at launch, stock, accounts,
+ * ads, partners, identity and analytics run as modules of the core services, so
+ * their prefixes legitimately have no address yet.
+ */
+export class UnknownUpstreamError extends ServiceUnavailableException {
   constructor(readonly service: string) {
     super(`no upstream configured for ${service}`);
     this.name = 'UnknownUpstreamError';
+  }
+}
+
+/** Raised when the owning service could not be reached at all. */
+export class UpstreamUnreachableError extends BadGatewayException {
+  constructor(readonly service: string, reason?: unknown) {
+    super(`upstream ${service} could not be reached`);
+    this.name = 'UpstreamUnreachableError';
+    if (reason !== undefined) this.cause = reason;
   }
 }
 
@@ -65,6 +80,11 @@ export class ProxyService {
       method: req.method,
       headers,
       ...(body !== undefined ? { body } : {}),
+    }).catch((err: unknown) => {
+      // A connection failure (DNS, refused, timeout) is the gateway's problem to
+      // report, not a crash: 502 says "the service behind me is not answering",
+      // which is what an operator needs to see in a log.
+      throw new UpstreamUnreachableError(target.upstream, err);
     });
 
     return {
