@@ -386,7 +386,7 @@ describe('Observability manifest (infra/observability/notification-integration.j
   });
 });
 
-// Image build contract (T-079).
+// Image build contract (T-081).
 //
 // The checks above prove a Dockerfile *exists* at the path the manifests name.
 // They passed while all six Next.js images were unstartable: each runtime stage
@@ -398,7 +398,7 @@ describe('Observability manifest (infra/observability/notification-integration.j
 // daemon — and they encode the two things that actually broke: the runtime
 // stage must be able to run its own CMD, and the repo must give Northflank the
 // root Dockerfile its default build path expects.
-describe('Image build contract (T-079)', () => {
+describe('Image build contract (T-081)', () => {
   const dockerfiles = () => {
     const dirs = [
       ...FRONT_END_NAMES.map((n) => `apps/${n}`),
