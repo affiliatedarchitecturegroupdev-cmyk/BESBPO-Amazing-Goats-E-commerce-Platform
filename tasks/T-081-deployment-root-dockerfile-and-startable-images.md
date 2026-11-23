@@ -30,11 +30,11 @@ failure looks like a networking or port problem.
 - [x] The root Dockerfile's coverage of every Node workspace is asserted
 - [x] The Python services are documented as building from their own directory
 - [x] `docs/14-deployment.md` explains both the root file and the runtime-stage rule
-- [ ] Human adds `human-approved` to the PR (this card touches `infra/`)
+- [x] Human added `human-approved`; PR #88 merged as e80dc38
 
 ## Notes
-`infra/` is a gated path, so the `agent-gate` check fails until a human adds
-`human-approved`. The code is complete and verified; the label is the human step.
+`infra/` is a gated path, so the `agent-gate` check failed until a human added
+`human-approved`. The label was added and the PR merged as `e80dc38`.
 
 The two Python services (`analytics`, `ai-forecast`) are not built from the root file.
 They need a Python base image and run `pip install .`, which requires their own
