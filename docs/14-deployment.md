@@ -159,6 +159,40 @@ served by `app/health/route.ts`:
 A new front end is a new node in the same shape; `infra/deploy.spec.mjs` fails
 the build if one of the six loses its node, its port or its health check.
 
+## Dockerfiles
+
+Every deployable has its own Dockerfile next to its code, and that is the
+preferred path: it gives each service its own build cache and build plan.
+
+There is also a **root `Dockerfile`**. Northflank's default build path is
+`/Dockerfile`, so a service created through the UI without overriding the path
+reports "cannot find the Dockerfile on the repository root" unless one exists.
+The root file builds any Node workspace from a build argument:
+
+```bash
+docker build --build-arg SERVICE=gateway    -t ag-gateway .
+docker build --build-arg SERVICE=storefront -t ag-storefront .
+```
+
+`SERVICE` is the workspace directory name. `docker-entrypoint.sh` starts a
+Next.js app with `next start` and a NestJS service with its compiled
+`dist/main.js`. The two Python services (`analytics`, `ai-forecast`) are not
+built from the root file — they need a different base image and run
+`pip install .`, so they build from their own directory, which is what Koyeb's
+`workdir` sets.
+
+Two rules the images depend on, both asserted by `infra/deploy.spec.mjs`:
+
+- **The runtime stage must be able to run its own `CMD`.** The Next.js images
+  use `node node_modules/next/dist/bin/next start` rather than `pnpm --filter
+  ... start`, because the runtime stage copies the built workspace but not the
+  pnpm shim. A `CMD` that runs `pnpm` there fails at container start with
+  `Cannot find module '/app/pnpm'`, which surfaces as a failed health check
+  rather than a failed build.
+- **The build context excludes `node_modules`, `.next` and `.git`** via
+  `.dockerignore`. Without it every Node build sends roughly 600 MB to the
+  daemon before compiling anything.
+
 ### Admin access
 
 The admin portal is on the private route and is additionally gated by the staff

@@ -43,6 +43,31 @@ const NEST_PORT = (dir) => {
 const northflank = readJson('infra/northflank/project.json');
 const koyeb = readYaml('infra/koyeb/koyeb-compose.yaml');
 
+// The deployable workspaces, by kind. The Node ones build from the repo root and
+// have a Dockerfile under apps/ or services/; the two Python services build from
+// their own directory because they run `pip install .`.
+const FRONT_END_NAMES = [
+  'storefront',
+  'trade-portal',
+  'driver-pwa',
+  'advertiser-portal',
+  'partner-portal',
+  'admin',
+];
+const SERVICE_NAMES = [
+  'gateway',
+  'commerce',
+  'payments',
+  'logistics',
+  'notifications',
+  'accounts',
+  'ads',
+  'identity',
+  'partners',
+  'stock',
+];
+const PYTHON_SERVICES = ['analytics', 'ai-forecast'];
+
 describe('Northflank template (infra/northflank/project.json)', () => {
   it('is a v1.2 template with a workflow root', () => {
     expect(northflank.apiVersion).toBe('v1.2');
@@ -358,5 +383,121 @@ describe('Observability manifest (infra/observability/notification-integration.j
   it('names the environment variables the application reads', () => {
     expect(obs.application.alertWebhookEnv).toEqual(['ALERT_WEBHOOK_URL', 'ALERT_WEBHOOK_SECRET']);
     expect(obs.application.healthPath).toBe('/health');
+  });
+});
+
+// Image build contract (T-081).
+//
+// The checks above prove a Dockerfile *exists* at the path the manifests name.
+// They passed while all six Next.js images were unstartable: each runtime stage
+// ran `CMD ["pnpm", ...]` but installed pnpm only in the build stage, so the
+// container died with `Cannot find module '/app/pnpm'` and Northflank reported a
+// failed health check rather than a build error. Nothing read the Dockerfiles.
+//
+// These assertions are static on purpose — they run in CI without a Docker
+// daemon — and they encode the two things that actually broke: the runtime
+// stage must be able to run its own CMD, and the repo must give Northflank the
+// root Dockerfile its default build path expects.
+describe('Image build contract (T-081)', () => {
+  const dockerfiles = () => {
+    const dirs = [
+      ...FRONT_END_NAMES.map((n) => `apps/${n}`),
+      ...SERVICE_NAMES.map((n) => `services/${n}`),
+    ];
+    return dirs.filter((d) => exists(join(d, 'Dockerfile'))).map((d) => ({
+      dir: d,
+      text: readFileSync(join(root, d, 'Dockerfile'), 'utf8'),
+    }));
+  };
+
+  // Split a Dockerfile into its stages, so a rule can be applied to the runtime
+  // stage only rather than to the file as a whole.
+  const stages = (text) => {
+    const parts = [];
+    let current = { from: '', lines: [] };
+    for (const line of text.split('\n')) {
+      const from = line.match(/^\s*FROM\s+(\S+)(?:\s+AS\s+(\S+))?/i);
+      if (from) {
+        if (current.from) parts.push(current);
+        current = { from: from[1], alias: from[2] ?? '', lines: [] };
+      } else {
+        current.lines.push(line);
+      }
+    }
+    if (current.from) parts.push(current);
+    return parts;
+  };
+
+  it('every Node image can run its own CMD without pnpm at run time', () => {
+    for (const { dir, text } of dockerfiles()) {
+      const parts = stages(text);
+      const runtime = parts[parts.length - 1];
+      const cmd = runtime.lines.find((l) => /^\s*CMD\s/.test(l));
+      expect(cmd, `${dir}: no CMD in the final stage`).toBeTruthy();
+
+      // `CMD ["pnpm", ...]` needs pnpm, which the runtime stage does not have.
+      // Either install it there or exec a binary that is present.
+      if (/pnpm/.test(cmd)) {
+        const installsPnpm = runtime.lines.some((l) => /corepack|npm i(nstall)? -g pnpm/.test(l));
+        expect(installsPnpm, `${dir}: CMD runs pnpm but the runtime stage never installs it`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it('every image declares a port and a production NODE_ENV', () => {
+    for (const { dir, text } of dockerfiles()) {
+      expect(/^\s*EXPOSE\s+\d+/m.test(text), `${dir}: no EXPOSE`).toBe(true);
+    }
+  });
+
+  it('gives Northflank the root Dockerfile its default build path looks for', () => {
+    // A service created with Northflank's defaults builds /Dockerfile. Without
+    // one the platform reports "cannot find the Dockerfile on the repository
+    // root", which is the error this task started from.
+    expect(exists('Dockerfile'), 'no root Dockerfile').toBe(true);
+    const rootDockerfile = readFileSync(join(root, 'Dockerfile'), 'utf8');
+
+    // It must be able to build any workspace the manifests deploy.
+    expect(rootDockerfile).toMatch(/ARG\s+SERVICE/);
+    for (const name of [...FRONT_END_NAMES, ...SERVICE_NAMES]) {
+      const inApps = exists(join('apps', name, 'package.json'));
+      const inServices = exists(join('services', name, 'package.json'));
+      if (!inApps && !inServices) continue; // Python services keep their own file.
+      expect(
+        rootDockerfile,
+        `root Dockerfile cannot build ${name}`,
+      ).toMatch(/apps\/\$\{SERVICE\}|services\/\$\{SERVICE\}/);
+    }
+  });
+
+  it('keeps the build context free of node_modules and build output', () => {
+    // The repo root is the context for every Node build. Without a .dockerignore
+    // each build ships node_modules (511 MB), .next (78 MB) and .git (18 MB) to
+    // the daemon.
+    expect(exists('.dockerignore'), 'no .dockerignore').toBe(true);
+    const ignore = readFileSync(join(root, '.dockerignore'), 'utf8');
+    for (const pattern of ['node_modules', '.next', '.git']) {
+      expect(ignore, `.dockerignore does not exclude ${pattern}`).toContain(pattern);
+    }
+  });
+
+  it('builds the Python services from their own directory', () => {
+    // analytics and ai-forecast run `pip install .`, which needs a
+    // pyproject.toml in the context. Koyeb sets `workdir` per service, so the
+    // context is the service directory and not the repo root; a root-context
+    // build would fail with "Directory '.' is not installable".
+    for (const name of PYTHON_SERVICES) {
+      const text = readFileSync(join(root, 'services', name, 'Dockerfile'), 'utf8');
+      expect(text, `${name} does not install its own package`).toMatch(/pip install .*\./);
+      expect(exists(join('services', name, 'pyproject.toml')), `${name} has no pyproject.toml`).toBe(
+        true,
+      );
+      // It must not depend on the monorepo root being the context.
+      expect(text, `${name} copies more than its own directory`).not.toMatch(
+        /COPY\s+\.\.\/|COPY\s+packages/,
+      );
+    }
   });
 });
