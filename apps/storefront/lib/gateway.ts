@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { ApiError, createClient, type ApiClient, type CatalogueFilters, type ResolvedSection } from '@ag/api-client';
+import { ApiError, createClient, type ApiClient, type CatalogueFilters, type PublicZoneTable, type ResolvedSection } from '@ag/api-client';
 import { toStorefrontItems, type StorefrontItem } from './catalog';
 import type { ServedAd } from './placements';
 
@@ -83,6 +83,20 @@ export async function loadCycle(): Promise<{ cutoffAt: string | null; orderOpen:
     return { cutoffAt: cycle.cutoffAt, orderOpen: cycle.orderOpen };
   } catch {
     return { cutoffAt: null, orderOpen: true };
+  }
+}
+
+/**
+ * The public delivery table: the fee per zone and the weekday each is served
+ * (T-055). A failed read yields an empty table, so `/delivery` still renders the
+ * cycle and the area checker and only the table is missing.
+ */
+export async function loadZoneTable(): Promise<Loaded<PublicZoneTable>> {
+  const empty: PublicZoneTable = { zones: [], routeDays: [], feeIncludesVat: true };
+  try {
+    return { data: await gatewayClient().zoneTable() };
+  } catch (err) {
+    return { data: empty, error: message(err) };
   }
 }
 

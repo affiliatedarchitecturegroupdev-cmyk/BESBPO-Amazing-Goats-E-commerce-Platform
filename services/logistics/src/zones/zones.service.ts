@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DeliveryQuote, GeoPoint, Zone } from './zones.types';
 import { quoteDelivery } from './zone-domain';
 import { checkArea, type AreaQuery, type ZoneCheck } from './zone-check.rules';
+import { publicZoneTable, type PublicZoneTable } from './zones.public';
 import { ZoneStore } from './zones.store';
 import { ROUTE_STORE } from '../routes/routes.service';
 import { RouteStore } from '../routes/routes.store';
@@ -48,5 +49,11 @@ export class ZonesService {
       this.slots.list(),
     ]);
     return checkArea(zones, area, { ...opts, routes, slots });
+  }
+
+  /** The delivery table the public `/delivery` page shows: fees and route days, no geometry. */
+  async publicTable(): Promise<PublicZoneTable> {
+    const [zones, routes] = await Promise.all([this.list(), this.routes.list()]);
+    return publicZoneTable(zones, routes);
   }
 }

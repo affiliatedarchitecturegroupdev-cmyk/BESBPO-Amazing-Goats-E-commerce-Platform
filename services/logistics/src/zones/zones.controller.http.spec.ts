@@ -108,6 +108,32 @@ describe('check delivery to an area before signing in', () => {
     expect(body.served && body.zone.code).toBe('KZN-NC-UMH');
   });
 
+  it('serves the public delivery table without a token', async () => {
+    const res = await fetch(`${base}/logistics/zones/table`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { zones: unknown[]; routeDays: unknown[]; feeIncludesVat: boolean };
+    expect(body.feeIncludesVat).toBe(true);
+    // Seeded zones are both present, ordered by code.
+    expect(body.zones).toEqual([
+      { code: 'KZN-DBN', name: 'Durban', feeCents: 9000, freeOverCents: 100_000 },
+      { code: 'KZN-NC-UMH', name: 'Umhlanga and Phoenix', feeCents: 7500, freeOverCents: null },
+    ]);
+    expect(body.routeDays).toEqual([{ dayOfWeek: 3, day: 'Wednesday', zones: ['Durban'] }]);
+  });
+
+  it('never puts the delivery geometry on the public table', async () => {
+    const res = await fetch(`${base}/logistics/zones/table`);
+    const raw = await res.text();
+    expect(raw).not.toContain('polygon');
+    expect(raw).not.toContain('"lat"');
+  });
+
+  it('keeps the zone table itself gated while `/table` is public', async () => {
+    // The distinction T-055 depends on: the fee is public, the polygons are not.
+    expect((await fetch(`${base}/logistics/zones/table`)).status).toBe(200);
+    expect((await fetch(`${base}/logistics/zones`)).status).toBe(401);
+  });
+
   it('serves the same answer through the service the controller calls', async () => {
     const check = await app.get(ZonesService).check({ suburb: 'Durban' });
     expect(check.served).toBe(true);

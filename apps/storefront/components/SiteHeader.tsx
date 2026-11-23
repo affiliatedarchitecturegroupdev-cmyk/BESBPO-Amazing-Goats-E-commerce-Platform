@@ -20,6 +20,8 @@ export async function SiteHeader() {
         <Link href="/shop/lamb">Lamb</Link>
         <Link href="/boxes">Boxes</Link>
         <Link href="/produce">Dairy and produce</Link>
+        <Link href="/recipes">Recipes</Link>
+        <Link href="/delivery">Delivery</Link>
         <Link href="/trade">Trade</Link>
         <a href={corporate} target="_blank" rel="noopener">About us</a>
         <Link href="/cart">Cart</Link>
