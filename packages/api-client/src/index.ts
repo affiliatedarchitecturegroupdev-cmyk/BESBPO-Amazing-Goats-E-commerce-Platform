@@ -126,6 +126,28 @@ export interface UnservedAreaCheck {
 
 export type AreaCheck = ServedAreaCheck | UnservedAreaCheck;
 
+/** One row of the public delivery table: the fee and the free-over threshold, no geometry. */
+export interface PublicZone {
+  code: string;
+  name: string;
+  feeCents: number;
+  freeOverCents: number | null;
+}
+
+/** The weekday a zone is served on. */
+export interface PublicRouteDay {
+  dayOfWeek: number;
+  day: string;
+  zones: string[];
+}
+
+/** What `GET /logistics/zones/table` returns for the public delivery page (T-055). */
+export interface PublicZoneTable {
+  zones: PublicZone[];
+  routeDays: PublicRouteDay[];
+  feeIncludesVat: true;
+}
+
 /** A catalogue row the gateway returns for a merchandising tile (BFF `BffCatalogueItem`). */
 export interface MerchCatalogueItem extends CatalogueItem {
   categorySlug: string | null;
@@ -337,6 +359,9 @@ export function createClient(
           goodsTotalCents: area.goodsTotalCents,
         })}`,
       ),
+
+    // The public delivery table: fees per zone and the weekday each is served (T-055).
+    zoneTable: () => req<PublicZoneTable>('/logistics/zones/table'),
 
     // Cart and checkout.
     createOrder: (cart: CartInput) =>

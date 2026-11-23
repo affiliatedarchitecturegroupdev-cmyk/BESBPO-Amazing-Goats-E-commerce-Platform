@@ -3,6 +3,7 @@ import { RequirePermissions } from '@ag/nest-auth';
 import { ZonesService } from './zones.service';
 import { DeliveryQuote, GeoPoint, Zone } from './zones.types';
 import type { ZoneCheck } from './zone-check.rules';
+import type { PublicZoneTable } from './zones.public';
 
 interface QuoteBody extends GeoPoint {
   goodsTotalCents?: number;
@@ -30,6 +31,11 @@ export class ZonesController {
       { postalCode, suburb },
       cents === undefined || Number.isNaN(cents) ? {} : { goodsTotalCents: cents },
     );
+  }
+
+  @Get('table')
+  table(): Promise<PublicZoneTable> {
+    return this.service.publicTable();
   }
 
   @Get()
