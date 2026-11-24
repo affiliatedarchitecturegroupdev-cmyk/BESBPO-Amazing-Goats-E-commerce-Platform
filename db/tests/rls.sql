@@ -73,6 +73,20 @@ INSERT INTO catalog.merch_items (section_id, variant_id, sort) VALUES
   ((SELECT id FROM catalog.merch_sections WHERE code = 'RLS-MERCH-LIVE'), '00000000-0000-0000-0000-00000000a001', 0),
   ((SELECT id FROM catalog.merch_sections WHERE code = 'RLS-MERCH-DRAFT'), '00000000-0000-0000-0000-00000000a001', 0);
 
+-- Content is editorial too (migrations 0023, 0024): a published recipe is public,
+-- a draft is not, and a recipe's detail and product links must not be more
+-- visible than the recipe itself. Inserted as the superuser, read as the app
+-- role below.
+INSERT INTO catalog.content (id, kind, slug, title, body_md, status, published_at) VALUES
+  ('c0000000-0000-0000-0000-00000000c001', 'recipe', 'rls-published-recipe', 'RLS published recipe', 'Published body.', 'published', now()),
+  ('c0000000-0000-0000-0000-00000000c002', 'recipe', 'rls-draft-recipe', 'RLS draft recipe', 'Draft body.', 'draft', NULL);
+INSERT INTO catalog.content_recipes (content_id, servings, prep_minutes, cook_minutes, ingredients, steps) VALUES
+  ('c0000000-0000-0000-0000-00000000c001', 4, 10, 20, '[{"item":"lamb"}]'::jsonb, '[{"text":"Cook it."}]'::jsonb),
+  ('c0000000-0000-0000-0000-00000000c002', 2, 5, 5, '[{"item":"secret"}]'::jsonb, '[{"text":"Not yet."}]'::jsonb);
+INSERT INTO catalog.content_products (content_id, variant_id) VALUES
+  ('c0000000-0000-0000-0000-00000000c001', '00000000-0000-0000-0000-00000000a001'),
+  ('c0000000-0000-0000-0000-00000000c002', '00000000-0000-0000-0000-00000000a001');
+
 -- MFA enrolments are a credential per subject (migration 0019). The secret is
 -- stored encrypted and a subject reads only their own row. `subject_ref` is the
 -- domain id: the same value the gateway sets as `app.user_id`.
@@ -198,6 +212,47 @@ SAVEPOINT s;
   SELECT pg_temp.assert_eq(
     (SELECT count(*) FROM catalog.merch_sections WHERE code LIKE 'RLS-MERCH-%'), 3,
     'merch sections: staff sees all');
+ROLLBACK TO SAVEPOINT s;
+
+-- Content: the public reads published recipes only, and a draft's detail and
+-- product links are invisible along with the draft itself (migrations 0023, 0024).
+SAVEPOINT s;
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.content WHERE slug LIKE 'rls-%-recipe'), 1,
+    'content: public sees only the published recipe');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.content_recipes WHERE content_id = 'c0000000-0000-0000-0000-00000000c001'), 1,
+    'content_recipes: public sees the published recipe''s detail');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.content_recipes WHERE content_id = 'c0000000-0000-0000-0000-00000000c002'), 0,
+    'content_recipes: a draft recipe''s detail stays hidden');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.content_products WHERE content_id = 'c0000000-0000-0000-0000-00000000c002'), 0,
+    'content_products: a draft recipe''s product links stay hidden');
+ROLLBACK TO SAVEPOINT s;
+
+-- Staff see the draft and its detail.
+SAVEPOINT s;
+  SET LOCAL app.staff = 'on';
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.content WHERE slug LIKE 'rls-%-recipe'), 2,
+    'content: staff sees drafts');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.content_recipes WHERE content_id = 'c0000000-0000-0000-0000-00000000c002'), 1,
+    'content_recipes: staff sees a draft recipe''s detail');
+ROLLBACK TO SAVEPOINT s;
+
+-- A recipe is not writable by the public: an unauthenticated insert is refused
+-- by the policy, not merely discouraged.
+SAVEPOINT s;
+  DO $$
+  BEGIN
+    INSERT INTO catalog.content (kind, slug, title, body_md, status)
+    VALUES ('recipe', 'rls-sneaky-recipe', 'Sneaky', '', 'published');
+    RAISE EXCEPTION 'content: public INSERT was allowed, the write policy is not enforced';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END $$;
 ROLLBACK TO SAVEPOINT s;
 
 -- Children inherit the parent's visibility.
