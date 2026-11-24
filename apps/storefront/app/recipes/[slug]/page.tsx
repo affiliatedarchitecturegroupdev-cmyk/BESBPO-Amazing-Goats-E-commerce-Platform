@@ -2,10 +2,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { JsonLd } from '../../../components/JsonLd';
 import { ProductCard } from '../../../components/ProductCard';
 import { loadCatalogue, loadRecipe } from '../../../lib/gateway';
-import { recipeLoadState, recipeProducts } from '../../../lib/recipe-pages';
-import { pageMetadata } from '../../../lib/seo';
+import { breadcrumbJsonLd, recipeJsonLd } from '../../../lib/jsonld';
+import { ingredientLine, recipeLoadState, recipeProducts } from '../../../lib/recipe-pages';
+import { pageMetadata, siteUrl } from '../../../lib/seo';
 
 // Published from the staff portal, so the recipe is read per request.
 export const dynamic = 'force-dynamic';
@@ -58,9 +60,34 @@ export default async function RecipePage({ params }: { params: { slug: string } 
 
   const { recipe: found } = state;
   const products = recipeProducts(found, items);
+  const path = `/recipes/${found.slug}`;
+
+  const recipeNode = recipeJsonLd({
+    name: found.title,
+    url: `${siteUrl()}${path}`,
+    description: found.summary,
+    imageUrl: found.heroImageUrl,
+    servings: found.servings,
+    prepMinutes: found.prepMinutes,
+    cookMinutes: found.cookMinutes,
+    ingredients: found.ingredients.map(ingredientLine),
+    steps: found.steps.map((step) => step.text),
+    datePublished: found.publishedAt,
+  });
 
   return (
     <article>
+      <JsonLd
+        nodes={[
+          recipeNode,
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Recipes', path: '/recipes' },
+            { name: found.title, path },
+          ]),
+        ]}
+      />
+
       <nav>
         <Link href="/recipes">Recipes</Link>
       </nav>

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { RecipeSummary, RecipeView } from '@ag/api-client';
 import { toStorefrontItems } from './catalog';
 import { FIXTURE_CATALOGUE } from './fixtures';
-import { recipeListState, recipeLoadState, recipeProducts } from './recipe-pages';
+import { ingredientLine, recipeListState, recipeLoadState, recipeProducts } from './recipe-pages';
 
 const summary = (over: Partial<RecipeSummary> = {}): RecipeSummary => ({
   slug: 'lamb-potjie',
@@ -100,7 +100,25 @@ describe('recipeProducts', () => {
       { variantIds: ['v-full-lamb-box', 'v-full-lamb-box'] },
       items,
     );
-    expect(products).toHaveLength(2);
-    expect(new Set(products.map((p) => p.id)).size).toBe(1);
+    expect(products).toHaveLength(1);
+  });
+});
+
+describe('ingredientLine', () => {
+  it('joins quantity, item and note into one line', () => {
+    expect(ingredientLine({ quantity: '2 kg', item: 'lamb neck', note: 'bone in' })).toBe(
+      '2 kg lamb neck bone in',
+    );
+  });
+
+  it('omits the parts that are absent', () => {
+    expect(ingredientLine({ item: 'salt' })).toBe('salt');
+    expect(ingredientLine({ quantity: 'a handful', item: 'parsley' })).toBe('a handful parsley');
+  });
+
+  it('states the same ingredient the page renders, not the raw jsonb entry', () => {
+    const ingredient = { quantity: '1.5 kg', item: 'lamb shoulder', note: 'boneless' };
+    expect(ingredientLine(ingredient)).toContain(ingredient.item);
+    expect(ingredientLine(ingredient)).toContain(ingredient.quantity);
   });
 });

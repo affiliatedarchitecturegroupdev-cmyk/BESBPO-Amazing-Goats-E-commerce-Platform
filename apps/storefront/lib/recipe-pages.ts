@@ -58,9 +58,27 @@ export function recipeProducts(
 ): StorefrontItem[] {
   const byId = new Map(items.map((item) => [item.id, item]));
   const out: StorefrontItem[] = [];
-  for (const id of recipe.variantIds) {
+  for (const id of new Set(recipe.variantIds)) {
     const item = byId.get(id);
     if (item) out.push(item);
   }
   return out;
+}
+
+/**
+ * One ingredient as a single line of text, for `Recipe.recipeIngredient` (T-073).
+ *
+ * Schema.org wants a plain string per ingredient, while the page renders the
+ * quantity, item and note as separate elements. Both must describe the same
+ * ingredient, so the string is built from the same parsed fields rather than
+ * from the raw `jsonb` entry.
+ */
+export function ingredientLine(ingredient: {
+  quantity?: string;
+  item: string;
+  note?: string;
+}): string {
+  return [ingredient.quantity, ingredient.item, ingredient.note]
+    .filter((part): part is string => Boolean(part))
+    .join(' ');
 }

@@ -22,7 +22,7 @@ food site), and they are what the assistant needs to answer cooking questions.
 - [x] `/recipes/[slug]` renders one recipe: ingredients, numbered steps, servings and times, and the products it uses with add-to-cart
 - [x] A recipe page links to the products it is about (`content_products`), so reading converts to buying
 - [x] `pageMetadata` applied per recipe, with the recipe title and summary
-- [ ] `Recipe` JSON-LD emitted once T-073 lands; this card leaves the object available and does not duplicate the generator
+- [x] `Recipe` JSON-LD emitted via T-073's `recipeJsonLd`, plus a `BreadcrumbList`; the generator is not duplicated
 - [x] Empty state when no recipes are published: a real message, not a broken page
 - [x] The stub `TODO(agent)` comment is removed
 - [x] Tests added and passing: list, detail, missing slug 404, empty state
@@ -34,3 +34,17 @@ Depends on T-071 for the content model. Keeps the storefront's existing read pat
 Ingredient quantities are free text in `jsonb`, because a recipe ingredient ("2 kg lamb
 shoulder") is not a product quantity and forcing it into the catalogue model would be
 wrong.
+
+## Merge notes
+T-055 (unmerged when this card was written) rewrote `/recipes` as a guest calculator and
+cut guide, and created its own `lib/recipes.ts`. Both are kept:
+
+- `lib/recipes.ts` stays T-055's calculator and cut guide (`estimateMeat`, `CUT_GUIDE`).
+- This card's page-state rules moved to `lib/recipe-pages.ts`, so two unrelated modules
+  no longer share a filename and neither loses its tests.
+- `/recipes` renders the published recipe list **and** the calculator and cut guide; the
+  calculator is the page's most-used tool and dropping it would have been a regression
+  hidden inside a merge conflict.
+
+`recipeProducts` now de-duplicates its variant ids: a recipe linked twice to one product
+rendered the same card twice.
