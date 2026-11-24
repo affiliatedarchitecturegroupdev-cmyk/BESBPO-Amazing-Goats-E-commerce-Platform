@@ -98,16 +98,37 @@ export function robotsRules(baseUrl: string) {
  * a shared link previews with the page's own title and description. `noindex`
  * marks a page that must not appear in search results.
  */
+/** The code-drawn social card, used when a page has no image of its own. */
+export const DEFAULT_OG_IMAGE = '/opengraph-image';
+
+/**
+ * An absolute image URL for Open Graph.
+ *
+ * Crawlers do not resolve a relative `og:image`, so a path has to be joined to
+ * the site URL. A page with no image falls back to the code-drawn card rather
+ * than omitting the tag, because a shared link with no image previews as a bare
+ * line of text.
+ */
+export function absoluteImage(imageUrl: string | undefined, base: string): string {
+  const value = imageUrl?.trim();
+  if (!value) return `${base}${DEFAULT_OG_IMAGE}`;
+  if (/^https?:\/\//i.test(value)) return value;
+  return `${base}${value.startsWith('/') ? value : `/${value}`}`;
+}
+
 export function pageMetadata(input: {
   title: string;
   description: string;
   path: string;
   noindex?: boolean;
   baseUrl?: string;
+  /** The page's own image. A relative path is resolved against the site URL. */
+  imageUrl?: string;
 }): Metadata {
   const base = siteUrl(input.baseUrl);
   const url = input.path === '/' ? `${base}/` : `${base}${input.path}`;
   const title = `${input.title} | ${SITE_NAME}`;
+  const image = absoluteImage(input.imageUrl, base);
   return {
     title: input.title,
     description: input.description,
@@ -120,7 +141,13 @@ export function pageMetadata(input: {
       siteName: SITE_NAME,
       locale: SITE_LOCALE,
       type: 'website',
+      images: [{ url: image, alt: input.title }],
     },
-    twitter: { card: 'summary_large_image', title, description: input.description },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: input.description,
+      images: [image],
+    },
   };
 }

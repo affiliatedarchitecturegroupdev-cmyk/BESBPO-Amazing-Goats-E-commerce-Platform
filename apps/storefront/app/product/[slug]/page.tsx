@@ -7,10 +7,12 @@ import { DeliveryAreaCheck } from '../../../components/DeliveryAreaCheck';
 import { AddToCartButton } from '../../../components/AddToCartButton';
 import { FulfilmentTag, Badges, SponsoredSlot } from '../../../components/FulfilmentTag';
 import { JsonLd } from '../../../components/JsonLd';
+import { ShareLinks } from '../../../components/ShareLinks';
 import { ProductCard } from '../../../components/ProductCard';
 import { formatRand } from '../../../lib/format';
 import { badgesFor, CATEGORIES } from '../../../lib/catalog';
 import { breadcrumbJsonLd, productJsonLd, productTrail } from '../../../lib/jsonld';
+import { shareTargets, shareUrl } from '../../../lib/share';
 import { cutoffMessage } from '../../../lib/fulfilment';
 import { loadCatalogue } from '../../../lib/gateway';
 import { pageMetadata, siteUrl } from '../../../lib/seo';
@@ -121,6 +123,10 @@ export default async function ProductSlugPage({ params }: { params: { slug: stri
           {related.map((r) => <ProductCard key={r.id} v={r} />)}
         </div>
       </SponsoredSlot>
+
+      <ShareLinks
+        targets={shareTargets({ url: shareUrl(siteUrl(), path), title: v.name })}
+      />
 
       <p><Link href={`/shop/${v.category}`}>Back to {v.category}</Link></p>
     </section>

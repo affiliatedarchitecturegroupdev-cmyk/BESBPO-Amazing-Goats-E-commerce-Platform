@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { JsonLd } from '../../../components/JsonLd';
 import { ProductCard } from '../../../components/ProductCard';
+import { ShareLinks } from '../../../components/ShareLinks';
 import { loadCatalogue, loadRecipe } from '../../../lib/gateway';
 import { breadcrumbJsonLd, recipeJsonLd } from '../../../lib/jsonld';
 import { ingredientLine, recipeLoadState, recipeProducts } from '../../../lib/recipe-pages';
 import { pageMetadata, siteUrl } from '../../../lib/seo';
+import { shareTargets, shareUrl } from '../../../lib/share';
 
 // Published from the staff portal, so the recipe is read per request.
 export const dynamic = 'force-dynamic';
@@ -32,6 +34,7 @@ export async function generateMetadata({
     title: recipe.seo.seoTitle,
     description: recipe.seo.seoDescription,
     path: `/recipes/${recipe.slug}`,
+    imageUrl: recipe.heroImageUrl,
   });
 }
 
@@ -160,6 +163,10 @@ export default async function RecipePage({ params }: { params: { slug: string } 
           </div>
         </section>
       )}
+
+      <ShareLinks
+        targets={shareTargets({ url: shareUrl(siteUrl(), path), title: found.title })}
+      />
 
       <p>
         <Link href="/recipes">All recipes</Link>
