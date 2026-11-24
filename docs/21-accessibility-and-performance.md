@@ -110,11 +110,14 @@ in the axe route list. The card asks for the one-handed outdoor path to be re-ch
 that is a real device walkthrough and remains open. Its touch targets and contrast
 should be audited with the same scripts before the pilot.
 
-**The portals are unaudited.** Only the storefront was in scope. `apps/admin`,
-`apps/trade-portal`, `apps/partner-portal` and `apps/advertiser-portal` share
-`globals.css` conventions and almost certainly have the same missing anchor rule. The
-fix belongs in `packages/ui-tokens` or a shared stylesheet rather than being copied into
-six apps, which is the follow-up this audit recommends.
+**The portals are unaudited.** Only the storefront was in scope. They are not simply
+copies of the storefront defect: `admin`, `trade-portal`, `partner-portal` and
+`advertiser-portal` each set an explicit link colour, so the 1.29:1 bug is specific to
+the storefront's missing rule and does not repeat. `driver-pwa` sets `color` on
+containers rather than on anchors, so any future `<a>` inside one of its bars would
+inherit the UA blue — it has none today. Run the same scripts against each before
+assuming either way, and put the shared rules in `packages/ui-tokens` rather than
+copying them into six apps, which is the follow-up this audit recommends.
 
 **No screen-reader session was run.** The accessibility tree was inspected
 programmatically and every control has a name, but a VoiceOver or NVDA pass over product

@@ -50,7 +50,7 @@ Both are written up so the next audit does not repeat them.
 
 ## Follow-up cards this creates
 
-- Audit the four portals (`admin`, `trade-portal`, `partner-portal`, `advertiser-portal`) with the same scripts.
+- Audit the four portals and the driver PWA with the same scripts. The portals set explicit link colours, so the storefront contrast bug does not repeat there; `driver-pwa` styles containers rather than anchors.
 - Move the link, focus and skip-link rules into `packages/ui-tokens` or a shared stylesheet rather than per-app `globals.css`.
 - Human screen-reader pass over product and checkout.
 - Driver PWA one-handed outdoor walkthrough.
