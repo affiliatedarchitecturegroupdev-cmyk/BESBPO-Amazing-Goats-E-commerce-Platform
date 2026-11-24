@@ -7,6 +7,13 @@ export interface OrderStore {
   get(id: string): Promise<Order | undefined>;
   insert(order: Order): Promise<Order>;
   updateStatus(id: string, status: OrderStatus): Promise<void>;
+  /**
+   * The orders owned by one customer, newest first. RLS already scopes a
+   * customer session to its own rows; this filter is what makes the in-memory
+   * store (which has no RLS) behave the same, and it keeps the ownership rule
+   * true even if a future caller reads without a session.
+   */
+  listByCustomer(userId: string): Promise<Order[]>;
 }
 
 /** In-memory order store used by tests and local runs until the SQL adapter is wired. */
@@ -33,5 +40,11 @@ export class InMemoryOrderStore implements OrderStore {
   async updateStatus(id: string, status: OrderStatus): Promise<void> {
     const order = this.byId.get(id);
     if (order) this.byId.set(id, { ...order, status });
+  }
+
+  async listByCustomer(userId: string): Promise<Order[]> {
+    return [...this.byId.values()]
+      .filter((o) => o.customerUserId === userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 }

@@ -55,6 +55,7 @@ const ROUTES = [
   '/cart',
   '/checkout',
   '/sign-in',
+  '/track',
   '/track/AG-ORD-1001',
   '/account',
 ];

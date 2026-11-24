@@ -220,6 +220,29 @@ export interface Order {
   lines?: CartLineInput[];
 }
 
+/** The shopper's view of their own order: no owner id, no staff fields. */
+export interface MyOrder {
+  id: string;
+  status: OrderStatus;
+  cycleId: string | null;
+  lines: OrderLineView[];
+  subtotalExVatCents: number;
+  deliveryFeeCents: number;
+  vatCents: number;
+  totalIncVatCents: number;
+  deliveryAddress?: Address;
+  createdAt: string;
+}
+
+/** A line as the tracking page shows it. */
+export interface OrderLineView {
+  sku: string;
+  qty: number;
+  unitPriceExVatCents: number;
+  fulfilment: FulfilmentType;
+  temperature: Temperature;
+}
+
 export interface CreditLimit {
   orgId: string;
   tier: CreditTier;
@@ -369,6 +392,11 @@ export function createClient(
     createOrder: (cart: CartInput) =>
       req<Order>('/commerce/orders', { method: 'POST', body: JSON.stringify(cart) }),
     order: (id: string) => req<Order>(`/commerce/orders/${encodeURIComponent(id)}`),
+
+    // The shopper's own orders (T-077 track). Separate from the staff calls
+    // above: these need only a signed-in customer, not `orders:read`.
+    myOrders: () => req<MyOrder[]>('/commerce/my-orders'),
+    myOrder: (id: string) => req<MyOrder>(`/commerce/my-orders/${encodeURIComponent(id)}`),
 
     // Retail media.
     serveAds: (slot: string, context: Record<string, string | number> = {}) =>

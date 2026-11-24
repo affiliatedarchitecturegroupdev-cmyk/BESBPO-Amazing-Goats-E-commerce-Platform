@@ -38,8 +38,8 @@ export default async function AccountPage() {
       <div className="grid" style={{ marginTop: 16 }}>
         <article className="card">
           <h2>Orders</h2>
-          <p className="p">Track an order with the link we sent you.</p>
-          <Link className="btn" href="/track/latest">Track an order</Link>
+          <p className="p">See what you ordered and where it is.</p>
+          <Link className="btn" href="/track">Your orders</Link>
         </article>
         <article className="card">
           <h2>Delivery details</h2>
