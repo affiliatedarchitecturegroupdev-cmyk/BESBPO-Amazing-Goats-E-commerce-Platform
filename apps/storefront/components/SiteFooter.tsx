@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { POLICIES } from '@ag/policy';
 import { loadAds } from '../lib/gateway';
 import { renderableAds } from '../lib/placements';
+import { socialLinks } from '../lib/social-links';
 
 /**
  * The site footer (T-060).
@@ -14,9 +15,14 @@ import { renderableAds } from '../lib/placements';
  * `renderableAds`: an ad that is not labelled Sponsored is dropped rather than
  * shown. A failed ad read yields no logos and the footer still renders, because a
  * legal footer must not depend on an ad call succeeding.
+ *
+ * The follow links come from `socialLinks`, which omits a channel with no handle
+ * configured. A farm that has not opened an Instagram account must not link to
+ * Instagram's front page, so an unset handle renders nothing at all.
  */
 export async function SiteFooter() {
   const partnerAds = renderableAds(await loadAds('A10'));
+  const socials = socialLinks();
 
   return (
     <footer style={{ borderTop: '1px solid var(--border)', marginTop: 36, paddingTop: 18 }}>
@@ -28,6 +34,26 @@ export async function SiteFooter() {
             </Link>
           ))}
         </nav>
+
+        {socials.length > 0 && (
+          <nav aria-label="Follow us" style={{ marginBottom: 12 }}>
+            <ul className="chips">
+              {socials.map((s) => (
+                <li key={s.channel}>
+                  <a
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="tag"
+                    aria-label={`Amazing Goats on ${s.label}`}
+                  >
+                    {s.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
 
         {partnerAds.length > 0 && (
           <section aria-label="Partners" style={{ marginBottom: 12 }}>

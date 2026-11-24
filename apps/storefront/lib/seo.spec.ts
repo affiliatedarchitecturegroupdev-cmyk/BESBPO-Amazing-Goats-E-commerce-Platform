@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  absoluteImage,
   buildSitemap,
+  DEFAULT_OG_IMAGE,
   DEFAULT_SITE_URL,
   pageMetadata,
   PRIVATE_PATHS,
@@ -113,5 +115,51 @@ describe('pageMetadata', () => {
       baseUrl: 'https://x.test',
     });
     expect(m.robots).toEqual({ index: false, follow: false });
+  });
+});
+
+describe('absoluteImage', () => {
+  const base = 'https://shop.example.test';
+
+  it('falls back to the code-drawn card when a page has no image', () => {
+    expect(absoluteImage(undefined, base)).toBe(`${base}${DEFAULT_OG_IMAGE}`);
+    expect(absoluteImage('   ', base)).toBe(`${base}${DEFAULT_OG_IMAGE}`);
+  });
+
+  it('joins a relative path to the site URL, because crawlers do not resolve it', () => {
+    expect(absoluteImage('/media/lamb.jpg', base)).toBe(`${base}/media/lamb.jpg`);
+    expect(absoluteImage('media/lamb.jpg', base)).toBe(`${base}/media/lamb.jpg`);
+  });
+
+  it('leaves an absolute URL alone', () => {
+    expect(absoluteImage('https://cdn.test/lamb.jpg', base)).toBe('https://cdn.test/lamb.jpg');
+  });
+});
+
+describe('pageMetadata images', () => {
+  it('puts an image on both the Open Graph and Twitter cards', () => {
+    const m = pageMetadata({
+      title: 'Lamb potjie',
+      description: 'd',
+      path: '/recipes/lamb-potjie',
+      baseUrl: 'https://shop.example.test',
+      imageUrl: '/media/potjie.jpg',
+    });
+    expect(m.openGraph?.images).toEqual([
+      { url: 'https://shop.example.test/media/potjie.jpg', alt: 'Lamb potjie' },
+    ]);
+    expect(m.twitter).toMatchObject({ images: ['https://shop.example.test/media/potjie.jpg'] });
+  });
+
+  it('still emits an image when the page has none, so a shared link previews', () => {
+    const m = pageMetadata({
+      title: 'Boxes',
+      description: 'd',
+      path: '/boxes',
+      baseUrl: 'https://shop.example.test',
+    });
+    expect(m.openGraph?.images).toEqual([
+      { url: `https://shop.example.test${DEFAULT_OG_IMAGE}`, alt: 'Boxes' },
+    ]);
   });
 });
