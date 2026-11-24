@@ -1,7 +1,18 @@
 import Link from 'next/link';
+import { CATEGORIES } from '../lib/catalog';
 
-// The 404 screen (T-064): shown for a bad URL or a `notFound()` from a page.
-// Plain-language copy, a route back to the shop, and no personal data.
+/**
+ * The 404 screen (T-064, extended by T-077).
+ *
+ * A 404 is not an error message, it is a lost shopper. So it carries a real
+ * search form — the same `/search?q=` the header uses — and the category links,
+ * because the two things a person with a dead link wants are "find the thing" or
+ * "get back into the shop". The form is a plain GET, so it works without
+ * JavaScript.
+ *
+ * The copy avoids blaming the visitor: a sold-out item and an old link are the
+ * two ordinary causes, and neither is their fault.
+ */
 export default function NotFound() {
   return (
     <section>
@@ -9,20 +20,36 @@ export default function NotFound() {
       <p className="p">
         The link may be old, or the item may have sold out. Nothing is broken on your side.
       </p>
+
+      <form action="/search" method="get" role="search" style={{ margin: '16px 0' }}>
+        <label htmlFor="not-found-q" className="p">
+          Search the range
+        </label>
+        <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+          <input
+            id="not-found-q"
+            name="q"
+            type="search"
+            placeholder="lamb neck, eggs, a braai box"
+            style={{ flex: 1, padding: 8 }}
+          />
+          <button className="btn" type="submit">
+            Search
+          </button>
+        </div>
+      </form>
+
+      <h2>Or browse a category</h2>
       <ul className="chips">
-        <li>
-          <Link href="/">Home</Link>
-        </li>
-        <li>
-          <Link href="/shop/lamb">Shop the range</Link>
-        </li>
-        <li>
-          <Link href="/search">Search</Link>
-        </li>
-        <li>
-          <Link href="/cart">Cart</Link>
-        </li>
+        {CATEGORIES.map((c) => (
+          <li key={c.slug}>
+            <Link href={`/shop/${c.slug}`} className="tag">
+              {c.label}
+            </Link>
+          </li>
+        ))}
       </ul>
+
       <p>
         <Link className="btn" href="/">
           Back to home

@@ -38,6 +38,7 @@ export const STATIC_ROUTES: RouteEntry[] = [
   { path: '/produce', changeFrequency: 'weekly', priority: 0.7 },
   { path: '/recipes', changeFrequency: 'weekly', priority: 0.6 },
   { path: '/delivery', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/faq', changeFrequency: 'monthly', priority: 0.5 },
   { path: '/trade', changeFrequency: 'monthly', priority: 0.6 },
 ];
 
