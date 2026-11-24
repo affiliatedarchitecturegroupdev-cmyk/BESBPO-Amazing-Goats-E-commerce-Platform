@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
-import { ApiError, createClient, type ApiClient, type CatalogueFilters, type PublicZoneTable, type RecipeSummary, type RecipeView, type ResolvedSection } from '@ag/api-client';
+import { ApiError, createClient, type ApiClient, type CatalogueFilters,
+  type MyOrder, type PublicZoneTable, type RecipeSummary, type RecipeView, type ResolvedSection } from '@ag/api-client';
 import { toStorefrontItems, type StorefrontItem } from './catalog';
 import type { ServedAd } from './placements';
 
@@ -141,4 +142,33 @@ export async function loadRecipe(slug: string): Promise<Loaded<RecipeView | unde
     if (err instanceof ApiError && err.status === 404) return { data: undefined };
     return { data: undefined, error: message(err) };
   }
+}
+
+/**
+ * The shopper's own orders (T-077 track). A 404 from `loadMyOrder` is
+ * `undefined`, not an error: the page answers "no such order" with `notFound()`,
+ * which is also what a caller who owns a different order gets. Keeping the two
+ * cases identical is the point — the response must not reveal which ids exist.
+ */
+export async function loadMyOrders(): Promise<Loaded<MyOrder[]>> {
+  try {
+    return { data: await gatewayClient().myOrders() };
+  } catch (err) {
+    return { data: [], error: message(err) };
+  }
+}
+
+export async function loadMyOrder(id: string): Promise<Loaded<MyOrder | undefined>> {
+  try {
+    return { data: await gatewayClient().myOrder(id) };
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return { data: undefined };
+    return { data: undefined, error: message(err) };
+  }
+}
+
+/** The most recent order for the account page's "track" shortcut. */
+export async function loadLatestOrder(): Promise<Loaded<MyOrder | undefined>> {
+  const { data, error } = await loadMyOrders();
+  return { data: data[0], ...(error ? { error } : {}) };
 }

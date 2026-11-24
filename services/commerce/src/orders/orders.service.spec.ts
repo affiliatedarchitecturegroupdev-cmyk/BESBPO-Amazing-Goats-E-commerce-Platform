@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { assignCycle, buildOrder, roundCents, toOrderLines } from './order-builder';
 import { OrdersService } from './orders.service';
 import { InMemoryOrderStore } from './orders.store';
@@ -92,5 +92,83 @@ describe('OrdersService', () => {
   it('404s on an unknown order', async () => {
     const service = new OrdersService(new InMemoryOrderStore(), cycles);
     await expect(service.get('nope')).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('OrdersService: the shopper\'s own orders (T-077 track)', () => {
+  const cycles = { list: async () => [THIS_WEEK, NEXT_WEEK] };
+
+  function seeded(): InMemoryOrderStore {
+    return new InMemoryOrderStore([
+      {
+        id: 'ord_a', cycleId: null, status: 'delivered', lines: [],
+        subtotalExVatCents: 100, deliveryFeeCents: 0, vatCents: 15, totalIncVatCents: 115,
+        createdAt: '2026-11-01T10:00:00.000Z', customerUserId: 'user-a',
+      },
+      {
+        id: 'ord_b', cycleId: null, status: 'packing', lines: [],
+        subtotalExVatCents: 200, deliveryFeeCents: 0, vatCents: 30, totalIncVatCents: 230,
+        createdAt: '2026-11-10T10:00:00.000Z', customerUserId: 'user-a',
+      },
+      {
+        id: 'ord_guest', cycleId: null, status: 'confirmed', lines: [],
+        subtotalExVatCents: 300, deliveryFeeCents: 0, vatCents: 45, totalIncVatCents: 345,
+        createdAt: '2026-11-11T10:00:00.000Z', customerUserId: null,
+      },
+    ]);
+  }
+
+  it('lists only the caller\'s own orders, newest first', async () => {
+    const service = new OrdersService(seeded(), cycles);
+    const mine = await service.myOrders({ userId: 'user-a', staff: false });
+    expect(mine.map((o) => o.id)).toEqual(['ord_b', 'ord_a']);
+    expect(mine.every((o) => !('customerUserId' in o))).toBe(true);
+  });
+
+  it('never returns another customer\'s order in the list', async () => {
+    const service = new OrdersService(seeded(), cycles);
+    expect(await service.myOrders({ userId: 'user-b', staff: false })).toEqual([]);
+  });
+
+  it('refuses the list with no identity, rather than returning everything', async () => {
+    const service = new OrdersService(seeded(), cycles);
+    await expect(service.myOrders({ staff: false })).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('returns the owner their own order', async () => {
+    const service = new OrdersService(seeded(), cycles);
+    const order = await service.myOrder('ord_a', { userId: 'user-a', staff: false });
+    expect(order.id).toBe('ord_a');
+    expect(order).not.toHaveProperty('customerUserId');
+  });
+
+  it('404s for a real order owned by someone else, so the id cannot be probed', async () => {
+    const service = new OrdersService(seeded(), cycles);
+    await expect(service.myOrder('ord_a', { userId: 'user-b', staff: false }))
+      .rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('404s identically for an order that does not exist', async () => {
+    const service = new OrdersService(seeded(), cycles);
+    await expect(service.myOrder('ord_nope', { userId: 'user-b', staff: false }))
+      .rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('404s a customer on a guest order that has no owner', async () => {
+    const service = new OrdersService(seeded(), cycles);
+    await expect(service.myOrder('ord_guest', { userId: 'user-a', staff: false }))
+      .rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('lets staff read any order', async () => {
+    const service = new OrdersService(seeded(), cycles);
+    const order = await service.myOrder('ord_guest', { userId: 'staff-1', staff: true });
+    expect(order.id).toBe('ord_guest');
+  });
+
+  it('refuses an anonymous caller before touching the store', async () => {
+    const service = new OrdersService(seeded(), cycles);
+    await expect(service.myOrder('ord_a', { staff: false }))
+      .rejects.toBeInstanceOf(UnauthorizedException);
   });
 });

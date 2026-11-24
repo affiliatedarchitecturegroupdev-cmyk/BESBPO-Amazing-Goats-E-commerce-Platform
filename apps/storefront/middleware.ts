@@ -18,7 +18,7 @@ import { guardDecisionGuardedOnly, NO_ACCESS_PATH, PORTAL_ROLES } from '@ag/rbac
  * `requireSession` on the server. A forged cookie gets past this file and is
  * rejected by both.
  */
-const GUARDED_PATHS = ['/account', '/account/*'];
+const GUARDED_PATHS = ['/account', '/account/*', '/track', '/track/*'];
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

@@ -39,4 +39,10 @@ export interface Order {
   paymentMethod?: string;
   deliveryAddress?: Address;
   createdAt: string;
+  /**
+   * The customer who placed the order, from `sales.orders.customer_user_id`.
+   * Null for a guest order. Read by the tracking ownership rule, and stripped
+   * from the customer-facing view by `toPublicOrder`.
+   */
+  customerUserId?: string | null;
 }

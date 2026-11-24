@@ -15,6 +15,7 @@ interface OrderRow {
   payment_method: string | null;
   delivery_address: Address | null;
   created_at: Date | string;
+  customer_user_id: string | null;
 }
 
 interface LineRow {
@@ -29,7 +30,7 @@ interface LineRow {
 const SELECT_ORDERS = `
   SELECT o.id, o.external_id, cy.code AS cycle_code, o.status, o.subtotal_ex_vat_cents,
          o.delivery_fee_cents, o.vat_cents, o.total_inc_vat_cents, o.payment_method,
-         o.delivery_address, o.created_at
+         o.delivery_address, o.created_at, o.customer_user_id
     FROM sales.orders o
     LEFT JOIN sales.cycles cy ON cy.id = o.cycle_id`;
 
@@ -46,6 +47,7 @@ function toOrder(row: OrderRow, lines: OrderLine[]): Order {
     paymentMethod: row.payment_method ?? undefined,
     deliveryAddress: row.delivery_address ?? undefined,
     createdAt: toIso(row.created_at),
+    customerUserId: row.customer_user_id,
   };
 }
 
@@ -160,5 +162,21 @@ export class PgOrderStore implements OrderStore {
     await this.db.withSession(currentSession(), (tx) =>
       tx.query(`UPDATE sales.orders SET status = $2 WHERE external_id = $1`, [id, status]),
     );
+  }
+
+  /**
+   * The caller's own orders. The `customer_user_id` predicate is explicit as well
+   * as enforced by RLS: a staff session would otherwise pass RLS and see every
+   * order, and this endpoint is the shopper's, not a staff listing.
+   */
+  async listByCustomer(userId: string): Promise<Order[]> {
+    const { rows } = await this.db.withSession(currentSession(), (tx) =>
+      tx.query<OrderRow & { id: string }>(
+        `${SELECT_ORDERS} WHERE o.customer_user_id = $1 ORDER BY o.created_at DESC`,
+        [userId],
+      ),
+    );
+    const lines = await this.linesFor(rows.map((r) => r.id));
+    return rows.map((row) => toOrder(row, lines.get(row.id) ?? []));
   }
 }
