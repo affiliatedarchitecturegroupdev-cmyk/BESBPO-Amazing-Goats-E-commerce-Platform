@@ -44,8 +44,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Sitewide Organization (T-073): one node, so every page identifies the
             business and its delivery area without repeating it per page. */}
         <JsonLd nodes={[organizationJsonLd(contactFromEnv())]} />
+        {/* A keyboard user should not have to Tab through ten header links on
+            every page to reach the content (WCAG 2.2 2.4.1). The link is the
+            first stop and appears only once focused. */}
+        <a className="skip-link" href="#main">Skip to main content</a>
         <SiteHeader />
-        <main className="container">{children}</main>
+        <main className="container" id="main" tabIndex={-1}>{children}</main>
         <SiteFooter />
         <div className="strip" />
         <ServiceWorkerRegistrar />

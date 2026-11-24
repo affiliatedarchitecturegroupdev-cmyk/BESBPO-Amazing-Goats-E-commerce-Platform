@@ -183,8 +183,8 @@ pre-order, KZN delivery, ZAR, POPIA) in mind.
 | Loyalty / points | No | Later | Low |
 | Product comparison | No | Low for 140 SKUs | Low |
 | Live chat with a human | No | Assistant handles first line | Medium |
-| Accessibility (WCAG 2.2 AA) | Untested | Audit + fixes; also a CPA/equality consideration | High |
-| Core Web Vitals budget | Untested | Measure and set a budget | High |
+| Accessibility (WCAG 2.2 AA) | Storefront audited, 0 axe violations | Portals and driver PWA still to audit; see `21-accessibility-and-performance.md` | High |
+| Core Web Vitals budget | Set and enforced in CI | LCP 2.5 s, CLS 0.1, TTFB 800 ms; see `21-accessibility-and-performance.md` | High |
 | Analytics and funnels | No (Koyeb analytics is KPIs, not web analytics) | Privacy-friendly web analytics | High |
 
 Two of these are legal rather than competitive: **allergen disclosure** for pre-packed

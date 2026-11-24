@@ -47,6 +47,11 @@ export default async function HomePage() {
 
   return (
     <section>
+      {/* The wireframe home opens on the banner and ad slot with no visible
+          heading, but a page with no `h1` gives a screen-reader user no title to
+          land on and leaves the `h2` sections without a parent (T-080). It is
+          visually hidden rather than invented as design. */}
+      <h1 className="visually-hidden">Amazing Goats: farm-direct lamb, chicken, eggs and dairy</h1>
       <CutoffBanner message={cycle.orderOpen ? cutoffMessage('cycle') : 'Ordering is closed for this cycle'} />
 
       {error && <p className="p" role="alert">{error}</p>}

@@ -24,3 +24,20 @@ h1,h2,h3{font-family:Fraunces,Georgia,serif;font-style:italic;line-height:1.2}
 .tbl caption{text-align:left;color:var(--muted);padding:0 0 8px}
 .tbl th,.tbl td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
 .tbl thead th{color:var(--muted);font-weight:600}
+/* Off-screen until focused: the first Tab reveals it over the header. */
+.skip-link{position:absolute;left:-9999px;top:0;z-index:100;background:var(--cream);color:var(--forest);padding:10px 16px;border-radius:0 0 6px 0;font-weight:600;text-decoration:underline}
+.skip-link:focus{left:0}
+/* Hidden from sight but read by a screen reader: a heading the design does not
+   show still has to exist in the outline. */
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+/* T-080: header links had no colour of their own, so they fell back to the
+   browser default link blue on the dark green bar (1.29:1). Cream on forest is
+   10.36:1. Underline on hover and focus keeps the link affordance without a
+   colour-only cue. */
+.site-nav a{color:var(--cream);text-decoration:none;padding:4px 2px;border-radius:6px}
+.site-nav a:hover,.site-nav a:focus-visible{text-decoration:underline;text-underline-offset:3px}
+/* A visible focus ring on every interactive element. `--ochre` on `--forest` is
+   5.28:1 and on the cream page background 2.4:1, so the ring is drawn with an
+   offset outline that reads on both. WCAG 2.2 2.4.11 needs it not to be hidden. */
+:focus-visible{outline:3px solid var(--kalahari);outline-offset:2px}
+.site-nav :focus-visible,.strip :focus-visible{outline-color:var(--ochre)}

@@ -16,7 +16,7 @@ export async function SiteHeader() {
   return (
     <header style={{ background: 'var(--forest)', color: 'var(--cream)', padding: '10px 18px', display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
       <Link href="/" style={{ color: 'var(--cream)', fontFamily: 'Georgia, serif', fontStyle: 'italic', fontWeight: 700, fontSize: 20, textDecoration: 'none' }}>Amazing Goats</Link>
-      <nav style={{ display: 'flex', gap: 14, marginLeft: 'auto', flexWrap: 'wrap', alignItems: 'center' }}>
+      <nav className="site-nav" aria-label="Shop" style={{ display: 'flex', gap: 14, marginLeft: 'auto', flexWrap: 'wrap', alignItems: 'center' }}>
         <Link href="/shop/lamb">Lamb</Link>
         <Link href="/boxes">Boxes</Link>
         <Link href="/produce">Dairy and produce</Link>

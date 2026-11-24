@@ -1,0 +1,11 @@
+{
+  "$comment": "The storefront performance budget (T-080). Thresholds are the Google 'good' boundaries, tightened where the measured value leaves room. scripts/perf-budget.spec.mjs fails CI when a measurement exceeds one.",
+  "measuredOn": "Chromium, 390x844 viewport, 1.6 Mbps down / 750 kbps up, 150 ms latency, 4x CPU throttle",
+  "budget": {
+    "lcpMs": 2500,
+    "cls": 0.1,
+    "ttfbMs": 800,
+    "transferredKb": 250,
+    "longTasks": 6
+  }
+}
