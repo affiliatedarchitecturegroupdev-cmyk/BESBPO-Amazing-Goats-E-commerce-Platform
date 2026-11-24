@@ -22,9 +22,10 @@ const axeSource = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const baseUrl = (process.argv[2] ?? 'http://localhost:4603').replace(/\/+$/, '');
 
 /**
- * Every public route. The private ones (cart, checkout, account, track) are in
- * the purchase-path walkthrough instead, because they need a session and the
- * audit should not fake one.
+ * Every public route, plus the purchase path. Cart, checkout, account and track
+ * render an empty or signed-out state without a session, which is what a
+ * first-time visitor sees, so they are audited as they are rather than with a
+ * faked session.
  */
 const ROUTES = [
   '/',
