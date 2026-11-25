@@ -53,6 +53,7 @@ Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 
 | T-048 | Persist the ads, partners and notifications stores (SQL adapters) | 4 | backend | gate:db |
 | T-049 | Apps: wire storefront and trade portal to the gateway | 4 | frontend | none |
 | T-050 | Apps: wire admin, driver, advertiser and partner portals to the gateway | 4 | frontend | none |
+| T-051 | Persist the remaining commerce stores (SQL adapters) | 4 | backend | gate:db |
 | T-053 | Storefront: make the cart real (add, update, remove, checkout) | 4 | frontend | none |
 | T-054 | Storefront: merchandising sections and occasion pages | 4 | frontend | none |
 | T-055 | Storefront: discovery and content pages | 4 | frontend | none |
