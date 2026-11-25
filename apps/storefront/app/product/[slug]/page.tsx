@@ -1,27 +1,75 @@
 // Wireframe: docs/wireframes/index.html#sf-product
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { CutoffBanner } from '../../../components/CutoffBanner';
+import { DeliveryAreaCheck } from '../../../components/DeliveryAreaCheck';
+import { AddToCartButton } from '../../../components/AddToCartButton';
 import { FulfilmentTag, Badges, SponsoredSlot } from '../../../components/FulfilmentTag';
+import { JsonLd } from '../../../components/JsonLd';
+import { ShareLinks } from '../../../components/ShareLinks';
 import { ProductCard } from '../../../components/ProductCard';
 import { formatRand } from '../../../lib/format';
-import { badgesFor } from '../../../lib/catalog';
+import { badgesFor, CATEGORIES } from '../../../lib/catalog';
+import { breadcrumbJsonLd, productJsonLd, productTrail } from '../../../lib/jsonld';
+import { shareTargets, shareUrl } from '../../../lib/share';
 import { cutoffMessage } from '../../../lib/fulfilment';
 import { loadCatalogue } from '../../../lib/gateway';
+import { pageMetadata, siteUrl } from '../../../lib/seo';
 
 // The catalogue is live, so the page renders per request.
 export const dynamic = 'force-dynamic';
 
 const SLOTS = ['Wed 15 Nov', 'Thu 16 Nov', 'Next week'];
 
+/** Per-product metadata (T-064): the product name and pack, when the item is found. */
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const { data: items } = await loadCatalogue();
+  const v = items.find((i) => i.id === params.slug || i.sku === params.slug);
+  if (!v) {
+    return pageMetadata({
+      title: 'Product not found',
+      description: 'This product is no longer available.',
+      path: `/product/${params.slug}`,
+      noindex: true,
+    });
+  }
+  return pageMetadata({
+    title: v.name,
+    description: `${v.name} (${v.pack}) from Amazing Goats — farm-direct and delivered on the weekly cycle.`,
+    path: `/product/${params.slug}`,
+  });
+}
+
 export default async function ProductSlugPage({ params }: { params: { slug: string } }) {
   const { data: items } = await loadCatalogue();
   const v = items.find((i) => i.id === params.slug || i.sku === params.slug);
   if (!v) notFound();
   const related = items.filter((i) => i.category === v.category && i.id !== v.id).slice(0, 3);
+  const path = `/product/${params.slug}`;
+  const trail = productTrail({ name: v.name, path, categorySlug: v.category }, CATEGORIES);
+
+  // No `aggregateRating`: the storefront has no rating source it can key by SKU
+  // (reviews are stored against a variant UUID), and marking up a rating the
+  // page does not show is a spam signal. It is added when the read path lands.
+  const product = productJsonLd({
+    name: v.name,
+    sku: v.sku,
+    url: `${siteUrl()}${path}`,
+    description: `${v.name} (${v.pack}) from Amazing Goats — farm-direct and delivered on the weekly cycle.`,
+    category: trail.categoryLabel,
+    priceCents: v.priceCents,
+    fulfilment: v.fulfilment,
+  });
 
   return (
     <section>
+      <JsonLd
+        nodes={[
+          product,
+          breadcrumbJsonLd(trail.crumbs),
+        ]}
+      />
       <h1>{v.name}</h1>
       <div className="img" aria-label="Gallery: swipe" />
 
@@ -42,8 +90,18 @@ export default async function ProductSlugPage({ params }: { params: { slug: stri
       <CutoffBanner message={cutoffMessage('cycle')} />
       <p className="p">Delivered chilled in an insulated branded box.</p>
 
+      {/* The area check answers "do you deliver to me" before checkout (T-078). */}
+      <DeliveryAreaCheck goodsTotalCents={v.priceCents ?? undefined} />
+
       <div className="row"><span>Subscribe and save</span><span>Off</span></div>
-      <Link className="btn" href="/cart">Add to cart</Link>
+      {v.priceCents != null && v.fulfilment !== 'quote' ? (
+        <AddToCartButton
+          item={{ sku: v.sku, name: v.name, fulfilment: v.fulfilment, temperature: v.temperature, priceCents: v.priceCents }}
+          redirectTo={`/product/${params.slug}`}
+        />
+      ) : (
+        <p className="p">Price on request — ask us for a quote.</p>
+      )}
       <Link className="btn o" href="/trade">Reserve for ceremony (quote)</Link>
 
       <h2>What is in the box</h2>
@@ -65,6 +123,10 @@ export default async function ProductSlugPage({ params }: { params: { slug: stri
           {related.map((r) => <ProductCard key={r.id} v={r} />)}
         </div>
       </SponsoredSlot>
+
+      <ShareLinks
+        targets={shareTargets({ url: shareUrl(siteUrl(), path), title: v.name })}
+      />
 
       <p><Link href={`/shop/${v.category}`}>Back to {v.category}</Link></p>
     </section>

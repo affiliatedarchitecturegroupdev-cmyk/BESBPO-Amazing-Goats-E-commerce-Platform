@@ -1,5 +1,5 @@
 # Backlog
-Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 monetise and scale.
+Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 monetise and scale, 4 range and storefront depth, 5 launch readiness, 6 growth, content and experience.
 
 | ID | Title | Phase | Agent | Gate |
 |---|---|---|---|---|
@@ -54,3 +54,31 @@ Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 
 | T-049 | Apps: wire storefront and trade portal to the gateway | 4 | frontend | none |
 | T-050 | Apps: wire admin, driver, advertiser and partner portals to the gateway | 4 | frontend | none |
 | T-051 | Persist the remaining commerce stores (SQL adapters) | 4 | backend | gate:db |
+| T-053 | Storefront: make the cart real (add, update, remove, checkout) | 4 | frontend | none |
+| T-054 | Storefront: merchandising sections and occasion pages | 4 | frontend | none |
+| T-055 | Storefront: discovery and content pages | 4 | frontend | none |
+| T-056 | Storefront: account, tracking and trade entry | 4 | frontend | none |
+| T-057 | Storefront: design system, fonts, imagery and responsive shell | 4 | frontend | none |
+| T-058 | Identity and gateway: sign-in front door (OIDC and session) — done | 5 | backend | none |
+| T-059 | Apps: sign-in screens, session guard and role-aware navigation | 5 | frontend | none |
+| T-060 | Storefront: legal, POPIA and consumer information pages | 5 | frontend | gate:legal |
+| T-061 | Gateway: reverse proxy for /commerce, /ads and /accounts | 5 | backend | gate:infra |
+| T-062 | Commerce: persist the merchandising store (SQL adapter) | 5 | backend | gate:db |
+| T-063 | Identity: persist MFA enrolments (SQL adapter) | 5 | backend | gate:db |
+| T-064 | Apps: error, not-found and loading screens; SEO and PWA basics | 5 | frontend | none |
+| T-065 | Logistics: implement proof of delivery (read, capture, temperature) — done | 5 | backend | none |
+| T-066 | Driver PWA: IndexedDB offline queue and day-close — done | 5 | frontend | none |
+| T-067 | Infra: deploy the remaining front ends (trade, admin, driver, advertiser, partner) — done | 5 | devops | gate:infra |
+| T-068 | Notifications: Resend email transport, HTML bodies and delivery webhooks | 6 | backend | gate:outbound |
+| T-069 | Notifications: newsletter list, double opt-in, unsubscribe and campaign send | 6 | backend | gate:outbound |
+| T-070 | Commerce: ratings and reviews with verified-purchase rules and moderation | 6 | backend | gate:db |
+| T-071 | Commerce: content model and blog | 6 | backend | gate:db |
+| T-072 | Storefront: recipes from content, replacing the /recipes stub | 6 | frontend | none |
+| T-073 | Storefront: structured data and AI-era SEO | 6 | frontend | none |
+| T-074 | Gateway: grounded shopping assistant with refusal and citations | 6 | backend | gate:new-dependency |
+| T-075 | Storefront: social share, follow links and Open Graph completion | 6 | frontend | none |
+| T-076 | Commerce: allergen and nutrition data model and display | 6 | backend | gate:legal |
+| T-077 | Storefront: remaining public pages (delivery, produce, track, FAQ, 404) | 6 | frontend | none |
+| T-078 | Storefront: delivery-area checker and transparent delivery pricing | 6 | frontend | none |
+| T-079 | Commerce: wishlist, back-in-stock alerts and abandoned-cart recovery | 6 | backend | gate:outbound |
+| T-080 | All apps: accessibility and Core Web Vitals audit and fixes | 6 | qa | none |

@@ -36,6 +36,37 @@ export interface JwtVerifyOptions {
   now?: () => number;
 }
 
+export interface JwtSignOptions {
+  /** HMAC secret (HS256). The gateway issues HS256 sessions. */
+  secret: string;
+  /** Injected so a caller can pin `iat`/`exp` in tests. */
+  now?: () => number;
+}
+
+/**
+ * Sign claims as a compact JWS. The counterpart to `verifyJwt`, and
+ * deliberately HS256 only: the gateway mints short sessions with a secret it
+ * holds, and RS256 signing would mean holding a private key in every replica.
+ *
+ * `iat` is stamped from `now` and `exp` is required from the caller, so a token
+ * can never be issued without a lifetime.
+ */
+export function signJwt(
+  claims: Omit<JwtClaims, 'iat'> & { exp: number },
+  opts: JwtSignOptions,
+): string {
+  if (!opts.secret) throw new JwtError('missing signing secret');
+  if (typeof claims.exp !== 'number' || !Number.isFinite(claims.exp)) {
+    throw new JwtError('exp is required');
+  }
+  const iat = Math.floor((opts.now?.() ?? Date.now()) / 1000);
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ ...claims, iat })).toString('base64url');
+  const input = `${header}.${payload}`;
+  const signature = createHmac('sha256', opts.secret).update(input).digest('base64url');
+  return `${input}.${signature}`;
+}
+
 function decodeSegment(segment: string): Buffer {
   const buf = Buffer.from(segment, 'base64url');
   if (buf.length === 0) throw new JwtError('malformed token');

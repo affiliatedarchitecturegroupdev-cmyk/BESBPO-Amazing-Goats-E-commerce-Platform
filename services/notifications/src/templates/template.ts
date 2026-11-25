@@ -15,6 +15,13 @@ export interface Message {
   /** Present for email; omitted for WhatsApp and SMS. */
   subject?: string;
   body: string;
+  /**
+   * Whether this message is transactional or marketing. The transport uses it to
+   * pick a sending identity: transactional and marketing send from different
+   * addresses, so a marketing complaint cannot degrade order-confirmation
+   * deliverability (ADR 0013).
+   */
+  kind?: 'transactional' | 'marketing';
 }
 
 export interface TemplateDefinition {
@@ -65,7 +72,11 @@ export function renderTemplate(
   if (!definition.channels.includes(channel)) {
     throw new Error(`template ${definition.key} does not support the ${channel} channel`);
   }
-  const message: Message = { channel, body: render(definition.body, values) };
+  const message: Message = {
+    channel,
+    body: render(definition.body, values),
+    kind: definition.kind,
+  };
   if (channel === 'email' && definition.subject)
     message.subject = render(definition.subject, values);
   return message;

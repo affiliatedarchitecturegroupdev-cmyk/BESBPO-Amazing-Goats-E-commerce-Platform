@@ -1,0 +1,89 @@
+# Koyeb runs the staging and preview stack (docs/14-deployment.md): the same
+# front door as production, so a release can be exercised end to end without
+# touching Johannesburg production data.
+#
+# This is a second `koyeb compose` file rather than more services in
+# `koyeb-compose.yaml` for a practical reason: the non-core file deploys Python
+# services on :8000, and the contract test asserts that port for every service in
+# it. Staging runs the Node front door on :3000, so it lives here where its own
+# ports and secrets are unambiguous.
+#
+# Apply with the Koyeb CLI:
+#   koyeb compose infra/koyeb/koyeb-staging.yaml
+#
+# Secrets are never committed. Create them in the control panel or with
+# `koyeb secret create <name> --value <value>`:
+#   ag-staging-db-url      a staging Postgres, never the production addon
+#   ag-staging-redis-url   a staging Redis
+#   ag-staging-jwt-secret  a signing key distinct from production
+app:
+  name: amazing-goats-staging
+
+services:
+  - definition:
+      name: staging-gateway
+      type: WEB
+      git:
+        repository: github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform
+        branch: main
+        workdir: services/gateway
+        docker:
+          dockerfile: Dockerfile
+      regions:
+        - fra
+      instance_types:
+        - scopes: ['region:fra']
+          type: 'small'
+      scalings:
+        - scopes: ['region:fra']
+          min: 0
+          max: 1
+      ports:
+        - port: 3000
+          protocol: http
+      routes:
+        - port: 3000
+          path: '/'
+      health_checks:
+        - http:
+            path: /health
+            port: 3000
+      env:
+        - key: DATABASE_URL
+          secret: ag-staging-db-url
+        - key: REDIS_URL
+          secret: ag-staging-redis-url
+        - key: JWT_SECRET
+          secret: ag-staging-jwt-secret
+
+  - definition:
+      name: staging-storefront
+      type: WEB
+      git:
+        repository: github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform
+        branch: main
+        workdir: apps/storefront
+        docker:
+          dockerfile: Dockerfile
+      regions:
+        - fra
+      instance_types:
+        - scopes: ['region:fra']
+          type: 'small'
+      scalings:
+        - scopes: ['region:fra']
+          min: 0
+          max: 1
+      ports:
+        - port: 3000
+          protocol: http
+      routes:
+        - port: 3000
+          path: '/'
+      health_checks:
+        - http:
+            path: /health
+            port: 3000
+      env:
+        - key: GATEWAY_URL
+          secret: ag-staging-gateway-url

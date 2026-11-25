@@ -8,6 +8,8 @@ One Postgres (Northflank addon, Johannesburg). One schema per bounded context: i
   CREATE ROLE ag_app LOGIN PASSWORD '...' NOSUPERUSER NOBYPASSRLS;
   GRANT USAGE ON SCHEMA identity, catalog, inventory, sales, accounts, logistics, payments, ads, partners, audit TO ag_app;
   GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA identity, catalog, inventory, sales, accounts, logistics, payments, ads, partners, audit TO ag_app;
+  -- Serial keys (catalog.merch_sections.id) draw from a sequence, so INSERTs need USAGE on them.
+  GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA identity, catalog, inventory, sales, accounts, logistics, payments, ads, partners, audit TO ag_app;
   ```
 - Migrations and seeds apply to a **clean** database (they are not idempotent). To bring one up and run the row-level security tests:
   ```bash

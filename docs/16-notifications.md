@@ -38,6 +38,40 @@ Every outcome is written to the dispatch log (`notifications.messages`) with a r
 `no_transport` / `transport_error`). A transport error is logged as a reason, not as the
 raw error, so a provider message cannot leak into the log.
 
+## Email provider (T-068)
+
+Resend is the provider. `ResendTransport` (`services/notifications/src/channels/resend.ts`)
+implements the same `MessageTransport` interface, so dispatch still never branches on the
+channel; `transportsFromEnv` prefers Resend when `RESEND_API_KEY` is set and falls back to
+the generic `HttpTransport` on `EMAIL_API_URL` for any other provider.
+
+Every email carries **both** an HTML part and a text part. The templates are plain text so
+the same copy serves SMS and WhatsApp; `renderHtml`
+(`services/notifications/src/templates/html.ts`) turns that text into an email body, and
+escapes every value before it reaches the markup, because a customer name is user data.
+An HTML-only email is a message some customers never see.
+
+Transactional and marketing mail send from **different addresses**
+(`EMAIL_FROM_TRANSACTIONAL`, `EMAIL_FROM_MARKETING`). This is deliberate: a marketing
+complaint damages the reputation of the address that earned it, and `order_confirmation`
+must not be collateral damage (ADR 0013). An unclassified message is treated as
+transactional, the safer default.
+
+### Delivery state
+
+`sent` in the dispatch log means the provider *accepted* the message. It does not mean
+delivered. `POST /notifications/delivery/resend` receives Resend's webhook, verifies the
+Svix signature over the raw body (enabled in `main.ts`), and records
+`email.delivered` / `email.bounced` / `email.complained` against the provider reference.
+An unverified request writes nothing, and a webhook is rejected outright when
+`RESEND_WEBHOOK_SECRET` is unset, so an unconfigured deployment fails closed.
+
+A bounce or complaint suppresses the address for **marketing**; transactional mail is
+still sent, because a customer needs their order confirmation even if a newsletter
+bounced. `GET /notifications/delivery/email/:providerRef` returns one message's outcomes
+and `GET /notifications/delivery/suppressed` lists suppressed addresses, both behind
+`support:manage`.
+
 Each channel implements one `MessageTransport` interface
 (`services/notifications/src/dispatch/dispatch.ts`), so dispatch never branches on the
 channel. `HttpTransport` (`services/notifications/src/channels/transports.ts`) POSTs
@@ -47,7 +81,17 @@ its credentials are present, so a half-configured channel records `failed: no_tr
 rather than sending to a broken endpoint. Reads and manual sends are behind
 `support:manage`.
 
+## Newsletter
+
+The newsletter list, double opt-in, unsubscribe and paced campaign send live in
+`services/notifications/src/newsletter`; see `docs/18-newsletter.md`. It is
+deliberately separate from `notifications.consent`, because consent to an order
+confirmation is not consent to a newsletter.
+
 ## Routes
 
 - `GET /notifications/email`, `GET /notifications/whatsapp`, `GET /notifications/sms` — the dispatch log per channel.
 - `POST /notifications/{email,whatsapp,sms}` — render a built-in template and send it.
+- `POST /notifications/delivery/resend` — the Resend delivery webhook (signature-authenticated, no session).
+- `GET /notifications/delivery/email/:providerRef` — delivery outcomes for one message.
+- `GET /notifications/delivery/suppressed` — addresses suppressed by a bounce or complaint.

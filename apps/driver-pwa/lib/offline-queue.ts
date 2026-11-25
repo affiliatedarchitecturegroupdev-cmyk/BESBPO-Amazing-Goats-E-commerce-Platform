@@ -16,6 +16,8 @@ export interface OfflineQueue {
   enqueue(e: QueuedEvent): Promise<void>;
   pending(): Promise<QueuedEvent[]>;
   markSynced(count: number): Promise<void>;
+  /** Drop everything — the day is closed, or the device is wiped. */
+  clear(): Promise<void>;
 }
 
 /** Client-generated UUID so replaying a sync never applies the same event twice. */
@@ -33,10 +35,15 @@ export function withId(event: NewEvent): QueuedEvent {
   return { ...event, id: newId() } as QueuedEvent;
 }
 
-/** TODO(T-021): back this with IndexedDB (idb), encrypt at rest, and clear after the day closes. */
+/**
+ * The in-memory queue. Kept for tests and for a browser with no IndexedDB, but
+ * a driver's captures must survive a closed tab, so the app uses
+ * `IndexedDbQueue` (T-066).
+ */
 export class MemoryQueue implements OfflineQueue {
   private items: QueuedEvent[] = [];
   async enqueue(e: QueuedEvent) { this.items.push(e); }
   async pending() { return [...this.items]; }
   async markSynced(count: number) { this.items = this.items.slice(count); }
+  async clear() { this.items = []; }
 }

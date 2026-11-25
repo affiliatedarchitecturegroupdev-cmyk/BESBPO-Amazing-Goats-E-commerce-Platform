@@ -4,24 +4,54 @@ import { ProductCard } from '../../components/ProductCard';
 import { SponsoredSlot } from '../../components/FulfilmentTag';
 import { cartTotals } from '../../lib/cart';
 import { groupByFulfilment, deliveryLine } from '../../lib/cart-groups';
+import { DeliveryAreaCheck } from '../../components/DeliveryAreaCheck';
 import { cartSession } from '../../lib/cart-session';
+import { updateCartQty, removeFromCart } from '../../lib/cart-actions';
 import { formatRand } from '../../lib/format';
 import { loadCatalogue } from '../../lib/gateway';
+import { pageMetadata } from '../../lib/seo';
+
+export const metadata = pageMetadata({
+  title: 'Cart',
+  description: 'Your Amazing Goats cart.',
+  path: '/cart',
+  noindex: true,
+});
 
 // The cart cookie and cross-sell catalogue are read per request.
 export const dynamic = 'force-dynamic';
 
-export default async function CartPage() {
+const MESSAGES: Record<string, string> = {
+  added: 'Added to your cart.',
+  unavailable: 'That item is not available to order right now.',
+  error: 'We could not add that item. Please try again.',
+};
+
+export default async function CartPage({ searchParams }: { searchParams: { cart?: string } }) {
   const cart = cartSession();
   const groups = groupByFulfilment(cart.lines);
   const totals = cartTotals(cart);
   const delivery = deliveryLine(cart.zoneId, totals.deliveryFeeCents);
+  const notice = searchParams.cart ? MESSAGES[searchParams.cart] : undefined;
+
+  if (cart.lines.length === 0) {
+    return (
+      <section>
+        <h1>Cart</h1>
+        {notice && <p className="p" role="status">{notice}</p>}
+        <p className="p">Your cart is empty.</p>
+        <Link className="btn" href="/shop/lamb">Shop the range</Link>
+      </section>
+    );
+  }
+
   const { data: items } = await loadCatalogue({ category: 'produce' });
   const crossSell = items[0];
 
   return (
     <section>
       <h1>Cart</h1>
+      {notice && <p className="p" role="status">{notice}</p>}
 
       {groups.map((g) => (
         <div key={g.temperature}>
@@ -30,14 +60,34 @@ export default async function CartPage() {
           {g.lines.map((l) => (
             <article key={l.sku} className="card row">
               <span>{l.name}</span>
-              <span>Qty {l.qty}</span>
-              <strong>{formatRand(l.unitPriceExVatCents * l.qty)}</strong>
+              <span className="row">
+                <form action={updateCartQty} className="row">
+                  <input type="hidden" name="sku" value={l.sku} />
+                  <input
+                    className="qty"
+                    type="number"
+                    name="qty"
+                    min={0}
+                    defaultValue={l.qty}
+                    aria-label={`Quantity for ${l.name}`}
+                  />
+                  <button className="btn o" type="submit">Update</button>
+                </form>
+                <form action={removeFromCart}>
+                  <input type="hidden" name="sku" value={l.sku} />
+                  <button className="btn o" type="submit">Remove</button>
+                </form>
+                <strong>{formatRand(l.unitPriceExVatCents * l.qty)}</strong>
+              </span>
             </article>
           ))}
         </div>
       ))}
 
       <SponsoredSlot slot="A7">Cross-sell: add charcoal</SponsoredSlot>
+
+      {/* Confirm the area against the cart's goods total, so free-over applies. */}
+      <DeliveryAreaCheck goodsTotalCents={totals.subtotalExVatCents} />
 
       <div className="row"><span>Subtotal</span><span>{formatRand(totals.subtotalExVatCents)}</span></div>
       <div className="row"><span>{delivery.label}</span><span>{formatRand(delivery.feeCents)}</span></div>
@@ -50,7 +100,7 @@ export default async function CartPage() {
       {crossSell && (
         <div>
           <h2>You might need</h2>
-          <ProductCard v={crossSell} sponsored />
+          <ProductCard v={crossSell} sponsored redirectTo="/cart" />
         </div>
       )}
     </section>

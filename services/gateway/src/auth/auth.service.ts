@@ -31,14 +31,32 @@ export class AuthService {
   /** The resolved caller plus session timing, read from the bearer token. */
   session(req: any): SessionView {
     const user = this.requireUser(req);
-    const claims = claimsFromRequest(req, { ...readJwtOptionsFromEnv(), ...this.options });
-    return sessionView(user, claims, this.now());
+    return sessionView(user, this.claims(req), this.now());
+  }
+
+  /** The caller, or undefined. For a route that must answer differently to anonymous. */
+  resolve(req: any): AuthUser | undefined {
+    return userFromRequest(req, this.options);
+  }
+
+  /** The verified claims, when there is a token to read them from. */
+  claims(req: any) {
+    return claimsFromRequest(req, { ...readJwtOptionsFromEnv(), ...this.options });
+  }
+
+  /**
+   * When the session was issued, in epoch milliseconds. The refresh endpoint
+   * uses it to refuse a renewal past the window, so a session cannot be
+   * extended forever by refreshing in a loop.
+   */
+  issuedAtMs(req: any): number | undefined {
+    const iat = this.claims(req)?.iat;
+    return typeof iat === 'number' ? iat * 1000 : undefined;
   }
 
   private requireUser(req: any): AuthUser {
-    const user = userFromRequest(req, this.options);
+    const user = this.resolve(req);
     if (!user) throw new UnauthorizedException();
     return user;
   }
 }
-

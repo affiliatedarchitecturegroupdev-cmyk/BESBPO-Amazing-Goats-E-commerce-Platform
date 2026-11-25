@@ -6,7 +6,16 @@ import { ServedAdSlot } from '../components/FulfilmentTag';
 import { CATEGORIES, featuredBoxes, specials, type StorefrontItem } from '../lib/catalog';
 import { adsForSlot, placeAds } from '../lib/placements';
 import { cutoffMessage, earlyWindowMessage } from '../lib/fulfilment';
-import { loadAds, loadCatalogue, loadCycle } from '../lib/gateway';
+import { toMerchSections } from '../lib/sections';
+import { loadAds, loadCatalogue, loadCycle, loadSections } from '../lib/gateway';
+import { pageMetadata } from '../lib/seo';
+
+export const metadata = pageMetadata({
+  title: 'Farm-direct lamb, chicken, eggs and dairy',
+  description:
+    'Shop the Amazing Goats range: lamb, chicken, eggs, dairy and produce, ordered on the weekly cycle and delivered across KwaZulu-Natal.',
+  path: '/',
+});
 
 // A live catalogue: render per request rather than at build time.
 export const dynamic = 'force-dynamic';
@@ -19,12 +28,13 @@ const OCCASIONS = [
 ];
 
 export default async function HomePage() {
-  const [{ data: items, error }, adsA1, adsA2, adsA4, cycle] = await Promise.all([
+  const [{ data: items, error }, adsA1, adsA2, adsA4, cycle, sections] = await Promise.all([
     loadCatalogue(),
     loadAds('A1'),
     loadAds('A2'),
     loadAds('A4'),
     loadCycle(),
+    loadSections('home'),
   ]);
 
   const banners = adsForSlot(adsA1.concat(adsA2), 'A1');
@@ -32,9 +42,16 @@ export default async function HomePage() {
   // A4 sponsored tiles sit among the specials, one in five, at most two.
   const specialsWithAds = placeAds(specials(items), adsA4);
   const essentials = items.filter((i) => i.category === 'eggs' || i.category === 'dairy');
+  // Curated merchandising the editor pinned to the home page (T-040).
+  const curated = toMerchSections(sections);
 
   return (
     <section>
+      {/* The wireframe home opens on the banner and ad slot with no visible
+          heading, but a page with no `h1` gives a screen-reader user no title to
+          land on and leaves the `h2` sections without a parent (T-080). It is
+          visually hidden rather than invented as design. */}
+      <h1 className="visually-hidden">Amazing Goats: farm-direct lamb, chicken, eggs and dairy</h1>
       <CutoffBanner message={cycle.orderOpen ? cutoffMessage('cycle') : 'Ordering is closed for this cycle'} />
 
       {error && <p className="p" role="alert">{error}</p>}
@@ -47,6 +64,15 @@ export default async function HomePage() {
           <li key={c.slug}><Link href={`/shop/${c.slug}`}>{c.label}</Link></li>
         ))}
       </ul>
+
+      {curated.map((s) => (
+        <div key={s.code}>
+          <h2>{s.title}</h2>
+          <div className="grid">
+            {s.cards.map((c) => <ProductCard key={c.item.sku} v={c.item} />)}
+          </div>
+        </div>
+      ))}
 
       <h2>Ready-made bundles</h2>
       <div className="grid">

@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
-import { ApiError, createClient, type ApiClient, type CatalogueFilters } from '@ag/api-client';
+import { ApiError, createClient, type ApiClient, type CatalogueFilters,
+  type MyOrder, type PublicZoneTable, type RecipeSummary, type RecipeView, type ResolvedSection } from '@ag/api-client';
 import { toStorefrontItems, type StorefrontItem } from './catalog';
 import type { ServedAd } from './placements';
 
@@ -84,4 +85,90 @@ export async function loadCycle(): Promise<{ cutoffAt: string | null; orderOpen:
   } catch {
     return { cutoffAt: null, orderOpen: true };
   }
+}
+
+/**
+ * The public delivery table: the fee per zone and the weekday each is served
+ * (T-055). A failed read yields an empty table, so `/delivery` still renders the
+ * cycle and the area checker and only the table is missing.
+ */
+export async function loadZoneTable(): Promise<Loaded<PublicZoneTable>> {
+  const empty: PublicZoneTable = { zones: [], routeDays: [], feeIncludesVat: true };
+  try {
+    return { data: await gatewayClient().zoneTable() };
+  } catch (err) {
+    return { data: empty, error: message(err) };
+  }
+}
+
+/**
+ * The resolved merchandising sections for a page, as the gateway's BFF returns
+ * them (T-040). A failed read yields no sections, so the page falls back to the
+ * catalogue rather than erroring.
+ */
+export async function loadSections(page = 'home'): Promise<ResolvedSection[]> {
+  try {
+    const res = await gatewayClient().merchandisingPage(page);
+    return res.sections;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The published recipes, for the list page (T-072). A failed read is reported as
+ * an error with an empty list, so the page shows "the kitchen is having trouble"
+ * rather than an empty state that looks like there are no recipes at all.
+ */
+export async function loadRecipes(
+  query: { taxonomy?: string[]; limit?: number } = {},
+): Promise<Loaded<RecipeSummary[]>> {
+  try {
+    return { data: await gatewayClient().recipes(query) };
+  } catch (err) {
+    return { data: [], error: message(err) };
+  }
+}
+
+/**
+ * One recipe by slug. A 404 is `undefined` rather than an error, because the
+ * detail page answers it with `notFound()` — the shop is fine, the recipe is
+ * simply not there — while a network failure is an error the page must show.
+ */
+export async function loadRecipe(slug: string): Promise<Loaded<RecipeView | undefined>> {
+  try {
+    return { data: await gatewayClient().recipe(slug) };
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return { data: undefined };
+    return { data: undefined, error: message(err) };
+  }
+}
+
+/**
+ * The shopper's own orders (T-077 track). A 404 from `loadMyOrder` is
+ * `undefined`, not an error: the page answers "no such order" with `notFound()`,
+ * which is also what a caller who owns a different order gets. Keeping the two
+ * cases identical is the point — the response must not reveal which ids exist.
+ */
+export async function loadMyOrders(): Promise<Loaded<MyOrder[]>> {
+  try {
+    return { data: await gatewayClient().myOrders() };
+  } catch (err) {
+    return { data: [], error: message(err) };
+  }
+}
+
+export async function loadMyOrder(id: string): Promise<Loaded<MyOrder | undefined>> {
+  try {
+    return { data: await gatewayClient().myOrder(id) };
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return { data: undefined };
+    return { data: undefined, error: message(err) };
+  }
+}
+
+/** The most recent order for the account page's "track" shortcut. */
+export async function loadLatestOrder(): Promise<Loaded<MyOrder | undefined>> {
+  const { data, error } = await loadMyOrders();
+  return { data: data[0], ...(error ? { error } : {}) };
 }

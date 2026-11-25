@@ -1,0 +1,21 @@
+# Keep the build context to source. Without this the daemon receives the host
+# node_modules (511 MB), every .next build output (78 MB) and the git history
+# (18 MB) on each of the eleven service builds.
+node_modules
+**/node_modules
+.next
+**/.next
+.git
+.gitignore
+**/*.md
+docs
+tasks
+.claude
+.openhands
+**/coverage
+**/dist
+**/.turbo
+**/*.log
+.env
+.env.*
+!.env.example

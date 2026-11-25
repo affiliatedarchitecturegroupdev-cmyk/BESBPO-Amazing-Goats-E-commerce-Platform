@@ -4,6 +4,14 @@ import { ProductCard } from '../../components/ProductCard';
 import { ServedAdSlot } from '../../components/FulfilmentTag';
 import { adsForSlot } from '../../lib/placements';
 import { loadAds, loadSearch } from '../../lib/gateway';
+import { pageMetadata } from '../../lib/seo';
+
+export const metadata = pageMetadata({
+  title: 'Search',
+  description: 'Search the Amazing Goats range for lamb, chicken, eggs, dairy and produce.',
+  path: '/search',
+  noindex: true,
+});
 
 // Search reads the live catalogue, so the page renders per request.
 export const dynamic = 'force-dynamic';

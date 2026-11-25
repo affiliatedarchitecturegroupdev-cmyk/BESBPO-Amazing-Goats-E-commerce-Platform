@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, Query } from '@nestjs/common';
 import { RequirePermissions } from '@ag/nest-auth';
 import { ZonesService } from './zones.service';
 import { DeliveryQuote, GeoPoint, Zone } from './zones.types';
+import type { ZoneCheck } from './zone-check.rules';
+import type { PublicZoneTable } from './zones.public';
 
 interface QuoteBody extends GeoPoint {
   goodsTotalCents?: number;
@@ -9,7 +11,32 @@ interface QuoteBody extends GeoPoint {
 
 @Controller('logistics/zones')
 export class ZonesController {
-  constructor(private readonly service: ZonesService) {}
+  // Explicit token, like the gateway's controllers: esbuild-based test runs emit
+  // no decorator metadata, so an implicit type-only injection resolves undefined.
+  constructor(@Inject(ZonesService) private readonly service: ZonesService) {}
+
+  /**
+   * Public by design: a shopper checks delivery before signing in, and the
+   * answer reveals only the zone they named, never the zone table. Declared
+   * before `:id` so `check` is not parsed as a zone id.
+   */
+  @Get('check')
+  check(
+    @Query('postalCode') postalCode?: string,
+    @Query('suburb') suburb?: string,
+    @Query('goodsTotalCents') goodsTotalCents?: string,
+  ): Promise<ZoneCheck> {
+    const cents = goodsTotalCents === undefined ? undefined : Number(goodsTotalCents);
+    return this.service.check(
+      { postalCode, suburb },
+      cents === undefined || Number.isNaN(cents) ? {} : { goodsTotalCents: cents },
+    );
+  }
+
+  @Get('table')
+  table(): Promise<PublicZoneTable> {
+    return this.service.publicTable();
+  }
 
   @Get()
   @RequirePermissions('routes:read')

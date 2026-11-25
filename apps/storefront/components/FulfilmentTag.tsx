@@ -45,7 +45,9 @@ export function ServedAdSlot({ ad }: { ad: ServedAd }) {
       <span className="tag ad">{ad.label}</span>
       {ad.headline ? <strong>{ad.headline}</strong> : null}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={ad.assetUrl} alt={ad.headline ?? ad.label} />
+      {/* Explicit dimensions reserve the box before the creative loads, so a slow
+          ad image cannot shift the page under a thumb (T-080). */}
+      <img src={ad.assetUrl} alt={ad.headline ?? ad.label} width={728} height={90} style={{ height: 'auto', maxWidth: '100%' }} />
     </div>
   );
   return ad.destinationUrl ? <a href={ad.destinationUrl}>{body}</a> : body;

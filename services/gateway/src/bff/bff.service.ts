@@ -1,13 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Variant } from '@ag/shared-types';
+import { PROXY_PREFIXES, type ProxyPrefix } from '../proxy/proxy.routes';
 import {
+  BffMerchPage,
+  BffCatalogueItem,
   FetchLike,
+  ResolvedSectionView,
   TtlCache,
   Upstreams,
   ViewChannel,
-  coerceItems,
+  coerceBffItems,
+  coerceSections,
   isOrderOpen,
+  merchPageFrom,
   readUpstreamsFromEnv,
+  toItemView,
+  visibleSections,
   visibleTo,
 } from './upstream';
 
@@ -24,14 +31,26 @@ export function viewForRoles(roles: readonly string[]): ViewChannel {
 export interface CatalogueResponse {
   view: ViewChannel;
   count: number;
-  items: Variant[];
+  items: BffCatalogueItem[];
+}
+
+export interface MerchandisingResponse {
+  view: ViewChannel;
+  page: BffMerchPage;
+  sections: ResolvedSectionView[];
 }
 
 export interface HomeResponse {
   view: ViewChannel;
   cycle: { cutoffAt: string | null; tradeLockAt: string | null; orderOpen: boolean };
-  sections: { id: string; items: Variant[] }[];
+  sections: ResolvedSectionView[];
 }
+
+/** The code of the fallback section used when a page has no curated sections. */
+export const CATALOGUE_SECTION_CODE = 'catalogue';
+
+/** How many tiles the fallback section shows. */
+const FALLBACK_SECTION_SIZE = 12;
 
 export class UpstreamError extends Error {
   constructor(readonly service: string, readonly status: number) {
@@ -69,14 +88,32 @@ export class BffService {
 
   async catalogue(view: ViewChannel, authorization?: string): Promise<CatalogueResponse> {
     const payload = await this.get('commerce', '/commerce/catalog', authorization);
-    const items = coerceItems(payload).filter((v) => visibleTo(v.channel, view));
+    const items = coerceBffItems(payload).filter((v) => visibleTo(v.channel, view));
     return { view, count: items.length, items };
   }
 
+  /**
+   * The curated merchandising sections for a page, resolved against the
+   * catalogue by the commerce service, then filtered to what this view may see.
+   * A missing or failing merchandising service yields no sections, so the page
+   * still renders from the catalogue.
+   */
+  async merchandising(page: BffMerchPage, view: ViewChannel, authorization?: string): Promise<MerchandisingResponse> {
+    let sections: ResolvedSectionView[] = [];
+    try {
+      const payload = await this.get('commerce', `/commerce/merchandising/page?page=${page}`, authorization);
+      sections = visibleSections(coerceSections(payload), view);
+    } catch {
+      sections = [];
+    }
+    return { view, page, sections };
+  }
+
   async home(view: ViewChannel, authorization?: string): Promise<HomeResponse> {
-    const [catalogue, cycle] = await Promise.all([
+    const [catalogue, cycle, merch] = await Promise.all([
       this.catalogue(view, authorization),
       this.get('commerce', '/commerce/cycles/current', authorization).catch(() => ({})),
+      this.merchandising('home', view, authorization),
     ]);
     const c = cycle as { cutoffAt?: string; tradeLockAt?: string };
     return {
@@ -86,7 +123,9 @@ export class BffService {
         tradeLockAt: c.tradeLockAt ?? null,
         orderOpen: isOrderOpen(view, c.cutoffAt, c.tradeLockAt, Date.now()),
       },
-      sections: [{ id: 'catalogue', items: catalogue.items.slice(0, 12) }],
+      // Curated sections when the merchandising service has them; otherwise one
+      // section from the catalogue, so the home page is never blank.
+      sections: merch.sections.length > 0 ? merch.sections : [fallbackSection(catalogue.items)],
     };
   }
 
@@ -102,12 +141,28 @@ export class BffService {
         }
       }),
     );
-    return aggregateOpenApi(docs.filter((d) => d.doc !== null) as { name: string; doc: unknown }[]);
+    return aggregateOpenApi(
+      docs.filter((d) => d.doc !== null) as { name: string; doc: unknown }[],
+      PROXY_PREFIXES.filter((p) => Boolean(this.upstreams[p.upstream])),
+    );
   }
 }
 
+/** The catalogue fallback: one section of the first few tiles, so a page always renders. */
+export function fallbackSection(items: BffCatalogueItem[]): ResolvedSectionView {
+  return {
+    code: CATALOGUE_SECTION_CODE,
+    title: 'Shop the range',
+    page: 'home',
+    items: items.slice(0, FALLBACK_SECTION_SIZE).map(toItemView),
+  };
+}
+
 /** Combine per-service documents: union of paths, namespaced schemas, one tag per service. */
-export function aggregateOpenApi(services: { name: string; doc: unknown }[]): Record<string, unknown> {
+export function aggregateOpenApi(
+  services: { name: string; doc: unknown }[],
+  prefixes: readonly ProxyPrefix[] = [],
+): Record<string, unknown> {
   const paths: Record<string, unknown> = {};
   const schemas: Record<string, unknown> = {};
   const tags: { name: string; description?: string }[] = [];
@@ -126,6 +181,19 @@ export function aggregateOpenApi(services: { name: string; doc: unknown }[]): Re
     for (const [schema, def] of Object.entries(d.components?.schemas ?? {})) {
       schemas[schema in schemas ? `${name}_${schema}` : schema] = def;
     }
+  }
+
+  // The gateway proxies these prefixes, so its document advertises them even
+  // when a service has no document of its own to contribute.
+  for (const { prefix, upstream } of prefixes) {
+    paths[`${prefix}/*`] ??= {
+      get: {
+        tags: [upstream],
+        summary: `Proxy to the ${upstream} service`,
+        description: `Forwarded to the ${upstream} service; its own auth and row-level security apply.`,
+        responses: { 200: { description: 'Proxied response from the owning service' } },
+      },
+    };
   }
 
   return {

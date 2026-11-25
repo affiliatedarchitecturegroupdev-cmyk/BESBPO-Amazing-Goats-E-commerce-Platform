@@ -8,6 +8,18 @@ import { MERCHANDISING_STORE, MerchandisingService } from './merchandising.servi
 import { InMemoryMerchandisingStore, MerchandisingStore } from './merchandising.store';
 import { PgMerchandisingStore } from './merchandising.sql-store';
 
+/**
+ * The merchandising store for the active driver: in-memory by default, the SQL
+ * adapter when `STORE_DRIVER=sql`. Exported so a test can assert the switch
+ * without booting the module.
+ */
+export function merchandisingStore(db?: Db): MerchandisingStore {
+  return selectStore<MerchandisingStore>(
+    new InMemoryMerchandisingStore(),
+    () => new PgMerchandisingStore(db!),
+  );
+}
+
 @Module({
   imports: [CatalogModule],
   controllers: [MerchandisingController],
@@ -15,11 +27,7 @@ import { PgMerchandisingStore } from './merchandising.sql-store';
     MerchandisingService,
     {
       provide: MERCHANDISING_STORE,
-      useFactory: (db?: Db) =>
-        selectStore<MerchandisingStore>(
-          new InMemoryMerchandisingStore(),
-          () => new PgMerchandisingStore(db!),
-        ),
+      useFactory: (db?: Db) => merchandisingStore(db),
       inject: [{ token: AG_DB, optional: true }],
     },
   ],

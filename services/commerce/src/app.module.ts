@@ -9,12 +9,14 @@ import { OrdersModule } from './orders/orders.module';
 import { CyclesModule } from './cycles/cycles.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { PromotionsModule } from './promotions/promotions.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { ContentModule } from './content/content.module';
 import { MerchandisingModule } from './merchandising/merchandising.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { ComplianceModule } from './compliance/compliance.module';
 
 @Module({
-  imports: [PersistenceModule, CatalogModule, PricingModule, OrdersModule, CyclesModule, SubscriptionsModule, PromotionsModule, MerchandisingModule, OnboardingModule, ComplianceModule],
+  imports: [PersistenceModule, CatalogModule, PricingModule, OrdersModule, CyclesModule, SubscriptionsModule, PromotionsModule, ReviewsModule, ContentModule, MerchandisingModule, OnboardingModule, ComplianceModule],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: PermissionsGuard }, { provide: APP_INTERCEPTOR, useClass: AuditInterceptor }],
 })

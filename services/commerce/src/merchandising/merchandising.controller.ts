@@ -18,8 +18,15 @@ export class MerchandisingController {
     return this.service.list();
   }
 
+  /**
+   * The resolved sections for a page — the read the storefront BFF uses. It is
+   * public on purpose: a curated section is marketing content the shop shows to
+   * everyone, and no storefront caller holds `merch:manage`. The rule and the
+   * `merch_sections_select` policy (migration 0018) both hide an inactive or
+   * out-of-window section, so an anonymous read only ever sees live strips.
+   * Declared before `:id` so `page` is not read as a section id.
+   */
   @Get('page')
-  @RequirePermissions('merch:manage')
   forPage(@Query() q: Record<string, unknown>) {
     return this.service.forPage(pageFrom(q));
   }

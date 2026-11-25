@@ -3,6 +3,8 @@ import { NotFoundException } from '@nestjs/common';
 import { findZone, pointInPolygon, quoteDelivery } from './zone-domain';
 import { ZonesService } from './zones.service';
 import { InMemoryZoneStore } from './zones.store';
+import { InMemoryRouteStore } from '../routes/routes.store';
+import { InMemorySlotStore } from '../slots/slots.store';
 import { Zone } from './zones.types';
 
 // A simple square zone around Johannesburg's eastern suburbs.
@@ -45,12 +47,25 @@ describe('quoteDelivery', () => {
 });
 
 describe('ZonesService', () => {
-  const build = () => new ZonesService(new InMemoryZoneStore([square]));
+  const build = (routes: ConstructorParameters<typeof InMemoryRouteStore>[0] = [],
+    slots: ConstructorParameters<typeof InMemorySlotStore>[0] = []) =>
+    new ZonesService(new InMemoryZoneStore([square]), new InMemoryRouteStore(routes), new InMemorySlotStore(slots));
 
   it('quotes at checkout for a delivery point', async () => {
     const quote = await build().quote({ lat: -26.2, lng: 28.2 }, 10000);
     expect(quote.deliverable).toBe(true);
     expect(quote.feeCents).toBe(6500);
+  });
+
+  it('checks an area from the zones, routes and slots it owns', async () => {
+    const service = build(
+      [{ id: 'r1', name: 'Wed Durban', dayOfWeek: 3, zoneId: 1 }],
+      [{ id: 's1', routeId: 'r1', startsAt: '2026-11-18T04:00:00.000Z', endsAt: '2026-11-18T16:00:00.000Z', capacity: 10, booked: 1, earlyWindow: false }],
+    );
+    const check = await service.check({ suburb: 'Johannesburg East' }, { now: new Date('2026-11-11T10:00:00Z') });
+    expect(check.served).toBe(true);
+    expect(check.served && check.feeCents).toBe(6500);
+    expect(check.served && check.nextSlot).toBe('2026-11-18T04:00:00.000Z');
   });
 
   it('404s on an unknown zone', async () => {

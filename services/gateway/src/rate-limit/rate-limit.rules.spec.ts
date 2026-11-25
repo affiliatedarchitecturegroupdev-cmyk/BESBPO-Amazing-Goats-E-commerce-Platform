@@ -83,6 +83,29 @@ describe('ruleFor', () => {
     expect(ruleFor({}, 'GET /nope')).toEqual(DEFAULT_RULE);
     expect(ruleFor({ 'GET /x': rule }, 'GET /x')).toEqual(rule);
   });
+
+  it('prefers an exact key over a prefix', () => {
+    const specific = { refillPerSec: 9, burst: 9 };
+    const rules = { 'GET /a': rule, 'GET /a/b': specific };
+    expect(ruleFor(rules, 'GET /a/b')).toEqual(specific);
+  });
+
+  it('applies a collection rule to a route with a path parameter', () => {
+    // A `:id` route is addressed by its concrete path at request time, so the
+    // rule written for the collection must still govern it.
+    const rules = { 'GET /gateway/assistant/conversations': rule };
+    expect(ruleFor(rules, 'GET /gateway/assistant/conversations/abc123')).toEqual(rule);
+  });
+
+  it('does not borrow a rule from a different method', () => {
+    const rules = { 'GET /x': rule };
+    expect(ruleFor(rules, 'POST /x')).toEqual(DEFAULT_RULE);
+  });
+
+  it('does not match a path that merely shares a prefix segment', () => {
+    const rules = { 'GET /gateway/assistant': rule };
+    expect(ruleFor(rules, 'GET /gateway/assistantx/y')).toEqual(DEFAULT_RULE);
+  });
 });
 
 describe('clientIp', () => {

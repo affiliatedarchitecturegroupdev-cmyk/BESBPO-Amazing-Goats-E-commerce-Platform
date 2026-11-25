@@ -28,7 +28,9 @@
     "LOG_DRAIN_SECRET": "",
     "STORE_URL": "https://amazinggoats.store",
     "CORPORATE_URL": "https://amazinggoats.besbpo.co.za",
-    "ORDERS_EMAIL": "orders@amazinggoats.store"
+    "ORDERS_EMAIL": "orders@amazinggoats.store",
+    "FIELD_ENCRYPTION_KEY": "",
+    "ADMIN_IP_ALLOWLIST": ""
   },
   "options": {
     "autorun": false,
@@ -136,7 +138,9 @@
                       "ALERT_WEBHOOK_SECRET": "${args.ALERT_WEBHOOK_SECRET}",
                       "STORE_URL": "${args.STORE_URL}",
                       "CORPORATE_URL": "${args.CORPORATE_URL}",
-                      "ORDERS_EMAIL": "${args.ORDERS_EMAIL}"
+                      "ORDERS_EMAIL": "${args.ORDERS_EMAIL}",
+                      "FIELD_ENCRYPTION_KEY": "${args.FIELD_ENCRYPTION_KEY}",
+                      "ADMIN_IP_ALLOWLIST": "${args.ADMIN_IP_ALLOWLIST}"
                     },
                     "files": {}
                   },
@@ -425,6 +429,241 @@
                   "buildSettings": {
                     "dockerfile": {
                       "dockerFilePath": "/apps/storefront/Dockerfile",
+                      "dockerWorkDir": "/"
+                    }
+                  },
+                  "buildConfiguration": {
+                    "pathIgnoreRules": ["docs/**", "*.md", "tasks/**"]
+                  },
+                  "deployment": {
+                    "instances": 1,
+                    "docker": { "configType": "default" }
+                  },
+                  "ports": [
+                    { "name": "http", "internalPort": 3000, "public": true, "protocol": "HTTP" }
+                  ],
+                  "healthChecks": [
+                    {
+                      "protocol": "HTTP",
+                      "type": "readinessProbe",
+                      "path": "/health",
+                      "port": 3000,
+                      "initialDelaySeconds": 15,
+                      "periodSeconds": 30,
+                      "timeoutSeconds": 5,
+                      "failureThreshold": 3,
+                      "successThreshold": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "CombinedService",
+                "ref": "trade-portal",
+                "spec": {
+                  "name": "trade-portal",
+                  "description": "Next.js trade portal: wholesale ordering, standing orders, statements and credit for trade customers.",
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "buildPlan": "nf-compute-200-8"
+                  },
+                  "buildSource": "git",
+                  "vcsData": {
+                    "projectUrl": "https://github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform",
+                    "projectType": "github",
+                    "projectBranch": "main"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "dockerFilePath": "/apps/trade-portal/Dockerfile",
+                      "dockerWorkDir": "/"
+                    }
+                  },
+                  "buildConfiguration": {
+                    "pathIgnoreRules": ["docs/**", "*.md", "tasks/**"]
+                  },
+                  "deployment": {
+                    "instances": 1,
+                    "docker": { "configType": "default" }
+                  },
+                  "ports": [
+                    { "name": "http", "internalPort": 3000, "public": true, "protocol": "HTTP" }
+                  ],
+                  "healthChecks": [
+                    {
+                      "protocol": "HTTP",
+                      "type": "readinessProbe",
+                      "path": "/health",
+                      "port": 3000,
+                      "initialDelaySeconds": 15,
+                      "periodSeconds": 30,
+                      "timeoutSeconds": 5,
+                      "failureThreshold": 3,
+                      "successThreshold": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "CombinedService",
+                "ref": "admin",
+                "spec": {
+                  "name": "admin",
+                  "description": "Next.js staff admin: catalogue, orders, pricing, credit, recalls, roles and audit. Private route, staff IP allow-list only.",
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "buildPlan": "nf-compute-200-8"
+                  },
+                  "buildSource": "git",
+                  "vcsData": {
+                    "projectUrl": "https://github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform",
+                    "projectType": "github",
+                    "projectBranch": "main"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "dockerFilePath": "/apps/admin/Dockerfile",
+                      "dockerWorkDir": "/"
+                    }
+                  },
+                  "buildConfiguration": {
+                    "pathIgnoreRules": ["docs/**", "*.md", "tasks/**"]
+                  },
+                  "deployment": {
+                    "instances": 1,
+                    "docker": { "configType": "default" }
+                  },
+                  "ports": [
+                    { "name": "http", "internalPort": 3000, "public": false, "protocol": "HTTP" }
+                  ],
+                  "healthChecks": [
+                    {
+                      "protocol": "HTTP",
+                      "type": "readinessProbe",
+                      "path": "/health",
+                      "port": 3000,
+                      "initialDelaySeconds": 15,
+                      "periodSeconds": 30,
+                      "timeoutSeconds": 5,
+                      "failureThreshold": 3,
+                      "successThreshold": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "CombinedService",
+                "ref": "driver-pwa",
+                "spec": {
+                  "name": "driver-pwa",
+                  "description": "Next.js installable driver PWA: day pack, proof of delivery and an encrypted offline queue. Public over HTTPS.",
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "buildPlan": "nf-compute-200-8"
+                  },
+                  "buildSource": "git",
+                  "vcsData": {
+                    "projectUrl": "https://github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform",
+                    "projectType": "github",
+                    "projectBranch": "main"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "dockerFilePath": "/apps/driver-pwa/Dockerfile",
+                      "dockerWorkDir": "/"
+                    }
+                  },
+                  "buildConfiguration": {
+                    "pathIgnoreRules": ["docs/**", "*.md", "tasks/**"]
+                  },
+                  "deployment": {
+                    "instances": 1,
+                    "docker": { "configType": "default" }
+                  },
+                  "ports": [
+                    { "name": "http", "internalPort": 3000, "public": true, "protocol": "HTTP" }
+                  ],
+                  "healthChecks": [
+                    {
+                      "protocol": "HTTP",
+                      "type": "readinessProbe",
+                      "path": "/health",
+                      "port": 3000,
+                      "initialDelaySeconds": 15,
+                      "periodSeconds": 30,
+                      "timeoutSeconds": 5,
+                      "failureThreshold": 3,
+                      "successThreshold": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "CombinedService",
+                "ref": "advertiser-portal",
+                "spec": {
+                  "name": "advertiser-portal",
+                  "description": "Next.js advertiser portal: campaigns, creatives and wallet.",
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "buildPlan": "nf-compute-200-8"
+                  },
+                  "buildSource": "git",
+                  "vcsData": {
+                    "projectUrl": "https://github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform",
+                    "projectType": "github",
+                    "projectBranch": "main"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "dockerFilePath": "/apps/advertiser-portal/Dockerfile",
+                      "dockerWorkDir": "/"
+                    }
+                  },
+                  "buildConfiguration": {
+                    "pathIgnoreRules": ["docs/**", "*.md", "tasks/**"]
+                  },
+                  "deployment": {
+                    "instances": 1,
+                    "docker": { "configType": "default" }
+                  },
+                  "ports": [
+                    { "name": "http", "internalPort": 3000, "public": true, "protocol": "HTTP" }
+                  ],
+                  "healthChecks": [
+                    {
+                      "protocol": "HTTP",
+                      "type": "readinessProbe",
+                      "path": "/health",
+                      "port": 3000,
+                      "initialDelaySeconds": 15,
+                      "periodSeconds": 30,
+                      "timeoutSeconds": 5,
+                      "failureThreshold": 3,
+                      "successThreshold": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "CombinedService",
+                "ref": "partner-portal",
+                "spec": {
+                  "name": "partner-portal",
+                  "description": "Next.js partner portal: orders, documents and actions for supply partners.",
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "buildPlan": "nf-compute-200-8"
+                  },
+                  "buildSource": "git",
+                  "vcsData": {
+                    "projectUrl": "https://github.com/affiliatedarchitecturegroupdev-cmyk/BESBPO-Amazing-Goats-E-commerce-Platform",
+                    "projectType": "github",
+                    "projectBranch": "main"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "dockerFilePath": "/apps/partner-portal/Dockerfile",
                       "dockerWorkDir": "/"
                     }
                   },

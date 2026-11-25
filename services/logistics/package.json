@@ -12,6 +12,7 @@
     "lint": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@ag/cutoff": "workspace:*",
     "@ag/db": "workspace:*",
     "@ag/nest-auth": "workspace:*",
     "@ag/nest-db": "workspace:*",

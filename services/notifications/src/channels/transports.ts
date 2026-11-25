@@ -1,5 +1,6 @@
 import type { Channel, Message } from '../templates/template';
 import type { MessageTransport, Recipient, TransportResult } from '../dispatch/dispatch';
+import { ResendTransport } from './resend';
 
 export interface HttpTransportConfig {
   channel: Channel;
@@ -48,11 +49,23 @@ export class HttpTransport implements MessageTransport {
  * its endpoint and token are present, so a missing channel makes dispatch
  * record `failed: no_transport` rather than sending to a half-configured
  * provider.
+ *
+ * Resend is preferred for email when `RESEND_API_KEY` is set. The generic
+ * `HttpTransport` stays for any other provider, keyed on `EMAIL_API_URL`.
  */
 export function transportsFromEnv(env: NodeJS.ProcessEnv = process.env): MessageTransport[] {
   const transports: MessageTransport[] = [];
 
-  if (env.EMAIL_API_URL && env.EMAIL_API_KEY) {
+  if (env.RESEND_API_KEY) {
+    transports.push(
+      new ResendTransport({
+        apiKey: env.RESEND_API_KEY,
+        transactionalFrom: env.EMAIL_FROM_TRANSACTIONAL ?? 'orders@amazinggoats.store',
+        marketingFrom: env.EMAIL_FROM_MARKETING ?? 'news@amazinggoats.store',
+        replyTo: env.EMAIL_REPLY_TO,
+      }),
+    );
+  } else if (env.EMAIL_API_URL && env.EMAIL_API_KEY) {
     transports.push(
       new HttpTransport({
         channel: 'email',
