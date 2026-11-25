@@ -30,11 +30,10 @@ CREATE POLICY promotions_visible ON sales.promotions USING (
   status <> 'draft'
   OR current_setting('app.staff', true) = 'on');
 
--- merchandising: the domain section id (`sec_1`) is a string, not the table's
--- serial id. Items stay in the existing catalog.merch_items table, joined to the
--- variant by SKU.
-ALTER TABLE catalog.merch_sections ADD COLUMN external_id text;
-CREATE UNIQUE INDEX merch_sections_external_id_key ON catalog.merch_sections (external_id);
+-- merchandising is not repeated here: `0018_merchandising_persistence.sql` (T-062)
+-- already adds `catalog.merch_sections.external_id` and the RLS both merch tables
+-- need. Two migrations adding the same column is a hard failure on a fresh
+-- database, which is how this duplicate was caught.
 
 -- subscriptions: the domain id, cadence and next run were not modelled (0005 had
 -- only `every_weeks`, which the domain does not use). The customer and bundle are
