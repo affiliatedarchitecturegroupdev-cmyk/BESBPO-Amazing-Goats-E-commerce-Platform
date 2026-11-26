@@ -30,6 +30,7 @@ import type {
   ProofOfDelivery,
   PurchaseOrder,
   Recall,
+  ResolvedPrice,
   Settlement,
   SlaughterSlot,
   WalletSummary,
@@ -440,6 +441,11 @@ export function createClient(
     settlements: () => req<Settlement[]>('/payments/reconciliation'),
     settlementExceptions: () => req<Settlement[]>('/payments/reconciliation/exceptions'),
     priceLists: () => req<PriceList[]>('/commerce/pricing'),
+    /** Prices for many SKUs from one list version; the storefront catalogue read. */
+    prices: (skus: string[], audience?: string) =>
+      req<Record<string, ResolvedPrice>>(
+        `/commerce/pricing/prices${query({ skus: skus.join(','), ...(audience ? { audience } : {}) })}`,
+      ),
     merchandising: () => req<MerchSection[]>('/commerce/merchandising'),
     adReport: () => req<AdReport>('/ads/reporting'),
     kpis: (range: { from?: string; to?: string; days?: number } = {}) =>

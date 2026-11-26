@@ -1,7 +1,7 @@
 import type { Variant } from '@ag/shared-types';
 import { FulfilmentTag, Badges } from './FulfilmentTag';
 import { AddToCartButton } from './AddToCartButton';
-import { formatRand } from '../lib/format';
+import { formatRandIncVat } from '../lib/format';
 import { badgesFor, type StorefrontItem } from '../lib/catalog';
 
 export function ProductCard({
@@ -23,7 +23,7 @@ export function ProductCard({
       <p>{v.pack}</p>
       <FulfilmentTag type={v.fulfilment} />
       {badges.length > 0 && <Badges badges={badges} />}
-      <p><strong>{v.priceCents != null ? formatRand(v.priceCents) : 'Price on request'}</strong></p>
+      <p><strong>{v.priceCents != null ? formatRandIncVat(v.priceCents) : 'Price on request'}</strong></p>
       {canAdd && (
         <AddToCartButton
           item={{ sku: v.sku, name: v.name, fulfilment: v.fulfilment, temperature: v.temperature, priceCents: v.priceCents }}

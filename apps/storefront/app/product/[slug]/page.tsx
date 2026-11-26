@@ -9,7 +9,7 @@ import { FulfilmentTag, Badges, SponsoredSlot } from '../../../components/Fulfil
 import { JsonLd } from '../../../components/JsonLd';
 import { ShareLinks } from '../../../components/ShareLinks';
 import { ProductCard } from '../../../components/ProductCard';
-import { formatRand } from '../../../lib/format';
+import { addVat, formatRandIncVat } from '../../../lib/format';
 import { badgesFor, CATEGORIES } from '../../../lib/catalog';
 import { breadcrumbJsonLd, productJsonLd, productTrail } from '../../../lib/jsonld';
 import { shareTargets, shareUrl } from '../../../lib/share';
@@ -58,7 +58,7 @@ export default async function ProductSlugPage({ params }: { params: { slug: stri
     url: `${siteUrl()}${path}`,
     description: `${v.name} (${v.pack}) from Amazing Goats — farm-direct and delivered on the weekly cycle.`,
     category: trail.categoryLabel,
-    priceCents: v.priceCents,
+    priceCents: v.priceCents == null ? undefined : addVat(v.priceCents),
     fulfilment: v.fulfilment,
   });
 
@@ -79,8 +79,8 @@ export default async function ProductSlugPage({ params }: { params: { slug: stri
       </div>
 
       <div className="row">
-        <strong>{v.priceCents != null ? formatRand(v.priceCents) : 'R ---'}</strong>
-        <span>{v.pack} · {v.unit}</span>
+        <strong>{v.priceCents != null ? formatRandIncVat(v.priceCents) : 'R ---'}</strong>
+        <span>{v.pack} · {v.unit}{v.priceCents != null ? ' · incl. VAT' : ''}</span>
       </div>
 
       <h2>Delivery slot</h2>
