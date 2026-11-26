@@ -79,10 +79,95 @@ describe('BffService.catalogue', () => {
 
   it('caches reads within the TTL', async () => {
     const calls: string[] = [];
+    const svc = new BffService(
+      COMMERCE_ONLY,
+      stubFetch({
+        '/commerce/catalog': CATALOGUE,
+        '/commerce/pricing/prices?skus=AG-EG-001%2CAG-PK-001': {},
+      }, calls),
+    );
+    await svc.catalogue('public');
+    await svc.catalogue('public');
+    // The catalogue and its one bulk price read are each cached, so the second
+    // call adds nothing. A *failed* price read is deliberately not cached, so
+    // the shop picks pricing back up as soon as it returns.
+    expect(calls.filter((c) => c.includes('/commerce/catalog'))).toHaveLength(1);
+    expect(calls.filter((c) => c.includes('/commerce/pricing/prices'))).toHaveLength(1);
+  });
+});
+
+describe('BffService catalogue prices', () => {
+  const PRICES = {
+    'AG-EG-001': { sku: 'AG-EG-001', priceListCode: 'public-2026', audience: 'public', priceExVatCents: 4500, vatCents: 675, priceIncVatCents: 5175, unitPriceBasis: 'dozen' },
+  };
+
+  it('fills priceCents on the catalogue rows from the public price list', async () => {
+    const svc = new BffService(
+      COMMERCE_ONLY,
+      stubFetch({ '/commerce/catalog': CATALOGUE, '/commerce/pricing/prices?skus=AG-EG-001%2CAG-PK-001': PRICES }),
+    );
+    const res = await svc.catalogue('public');
+    const eggs = res.items.find((i) => i.sku === 'AG-EG-001');
+    expect(eggs?.priceCents).toBe(4500);
+    // A SKU the price list does not carry keeps no price rather than a zero.
+    expect(res.items.find((i) => i.sku === 'AG-PK-001')?.priceCents).toBeUndefined();
+  });
+
+  it('asks for every visible SKU in one read', async () => {
+    const calls: string[] = [];
     const svc = new BffService(COMMERCE_ONLY, stubFetch({ '/commerce/catalog': CATALOGUE }, calls));
     await svc.catalogue('public');
+    const priceCall = calls.find((c) => c.includes('/commerce/pricing/prices'));
+    expect(priceCall).toContain('skus=AG-EG-001%2CAG-PK-001');
+  });
+
+  it('prices only what the view may see, not the hidden trade-only rows', async () => {
+    const calls: string[] = [];
+    const svc = new BffService(COMMERCE_ONLY, stubFetch({ '/commerce/catalog': CATALOGUE }, calls));
     await svc.catalogue('public');
-    expect(calls).toHaveLength(1);
+    const priceCall = calls.find((c) => c.includes('/commerce/pricing/prices'));
+    expect(priceCall).not.toContain('AG-BF-001');
+  });
+
+  it('still renders the catalogue when the price read fails', async () => {
+    // Pricing down must not empty the shop: the rows survive without a price.
+    const svc = new BffService(
+      COMMERCE_ONLY,
+      stubFetch({ '/commerce/catalog': CATALOGUE }), // no prices route -> 404
+    );
+    const res = await svc.catalogue('public');
+    expect(res.items.map((i) => i.sku)).toEqual(['AG-EG-001', 'AG-PK-001']);
+    expect(res.items.every((i) => i.priceCents === undefined)).toBe(true);
+  });
+
+  it('ignores a malformed or negative price rather than rendering it', async () => {
+    for (const bad of [{ priceExVatCents: '4500' }, { priceExVatCents: 12.5 }, { priceExVatCents: -1 }, {}]) {
+      const svc = new BffService(
+        COMMERCE_ONLY,
+        stubFetch({
+          '/commerce/catalog': CATALOGUE,
+          '/commerce/pricing/prices?skus=AG-EG-001%2CAG-PK-001': { 'AG-EG-001': bad },
+        }),
+      );
+      const res = await svc.catalogue('public');
+      expect(res.items.find((i) => i.sku === 'AG-EG-001')?.priceCents).toBeUndefined();
+    }
+  });
+
+  it('prices merchandising tiles on the home page too', async () => {
+    const future = new Date(Date.now() + 3600_000).toISOString();
+    const svc = new BffService(
+      COMMERCE_ONLY,
+      stubFetch({
+        '/commerce/catalog': CATALOGUE,
+        '/commerce/cycles/current': { cutoffAt: future, tradeLockAt: future },
+        '/commerce/merchandising/page?page=home': MERCH,
+        '/commerce/pricing/prices?skus=AG-EG-001': PRICES,
+      }),
+    );
+    const res = await svc.home('public');
+    const eggs = res.sections[0].items.find((i) => i.sku === 'AG-EG-001');
+    expect(eggs?.item.priceCents).toBe(4500);
   });
 });
 

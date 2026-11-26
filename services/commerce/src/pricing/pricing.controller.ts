@@ -2,7 +2,7 @@ import { Body, Controller, ForbiddenException, Get, Param, Post, Query, Req } fr
 import { RequirePermissions, userFromRequest } from '@ag/nest-auth';
 import { canAny } from '@ag/rbac';
 import { PricingService } from './pricing.service';
-import { PriceList, PriceListAudience, PRICE_LIST_AUDIENCES } from './pricing.types';
+import { PriceList, PriceListAudience, PRICE_LIST_AUDIENCES, ResolvedPrice } from './pricing.types';
 
 function audienceFrom(q: Record<string, unknown>): PriceListAudience {
   const value = typeof q.audience === 'string' ? q.audience : 'public';
@@ -29,6 +29,25 @@ function assertAudienceAllowed(q: Record<string, unknown>, req: unknown): PriceL
   return audience;
 }
 
+/** Cap a bulk price read; a catalogue page needs tens of SKUs, not thousands. */
+export const MAX_PRICE_SKUS = 100;
+
+/**
+ * Parse a comma-separated `skus` param. Empty entries are dropped, duplicates
+ * removed, and the list is capped so one anonymous request cannot ask the
+ * pricing engine for the whole catalogue.
+ */
+export function skusFrom(raw: unknown): string[] {
+  if (typeof raw !== 'string' || !raw) return [];
+  const seen = new Set<string>();
+  for (const part of raw.split(',')) {
+    const sku = part.trim();
+    if (sku) seen.add(sku);
+    if (seen.size >= MAX_PRICE_SKUS) break;
+  }
+  return [...seen];
+}
+
 @Controller('commerce/pricing')
 export class PricingController {
   constructor(private readonly service: PricingService) {}
@@ -48,6 +67,16 @@ export class PricingController {
   price(@Query() q: Record<string, unknown>, @Req() req: unknown) {
     const sku = typeof q.sku === 'string' ? q.sku : '';
     return this.service.priceFor(assertAudienceAllowed(q, req), sku);
+  }
+
+  /**
+   * Prices for many SKUs from one list version, so a catalogue page is a single
+   * read rather than one call per product. Same audience rule as the single
+   * read: public by default, anything else needs `pricing:read`.
+   */
+  @Get('prices')
+  prices(@Query() q: Record<string, unknown>, @Req() req: unknown): Promise<Record<string, ResolvedPrice>> {
+    return this.service.priceMany(assertAudienceAllowed(q, req), skusFrom(q.skus));
   }
 
   @Get(':id')

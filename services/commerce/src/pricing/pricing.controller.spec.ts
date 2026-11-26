@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { requiresSecondApprover } from '@ag/rbac';
-import { PricingController } from './pricing.controller';
+import { MAX_PRICE_SKUS, PricingController, skusFrom } from './pricing.controller';
 import { PricingService } from './pricing.service';
 import { InMemoryPricingStore } from './pricing.store';
 import { PriceList } from './pricing.types';
@@ -97,5 +97,71 @@ describe('PricingController', () => {
     // If pricing:approve is ever removed from TWO_PERSON, this fails and the
     // publish guard must be revisited together with the RBAC matrix.
     expect(requiresSecondApprover('pricing:approve')).toBe(true);
+  });
+
+  describe('bulk prices', () => {
+    const live = () =>
+      draft({
+        status: 'published',
+        items: [
+          { sku: 'AG-LB-005', priceExVatCents: 29000, unitPriceBasis: 'kg' },
+          { sku: 'AG-EG-001', priceExVatCents: 4500, unitPriceBasis: 'dozen' },
+        ],
+      });
+
+    it('prices many SKUs for an anonymous shopper in one read', async () => {
+      const prices = await controller([live()]).prices({ skus: 'AG-LB-005,AG-EG-001' }, {});
+      expect(prices['AG-LB-005'].priceExVatCents).toBe(29000);
+      expect(prices['AG-EG-001'].priceExVatCents).toBe(4500);
+      expect(prices['AG-LB-005'].audience).toBe('public');
+    });
+
+    it('omits SKUs the live list does not carry', async () => {
+      const prices = await controller([live()]).prices({ skus: 'AG-LB-005,AG-XX-999' }, {});
+      expect(Object.keys(prices)).toEqual(['AG-LB-005']);
+    });
+
+    it('serves a draft price to nobody', async () => {
+      // A price list only exists for shoppers once it is published; a draft must
+      // not leak through the bulk read either.
+      const prices = await controller([draft()]).prices({ skus: 'AG-LB-005' }, {});
+      expect(prices).toEqual({});
+    });
+
+    it('refuses a trade audience to a caller without pricing:read', async () => {
+      const ctl = controller([live()]);
+      expect(() => ctl.prices({ skus: 'AG-LB-005', audience: 'trader' }, {})).toThrow(
+        /requires pricing:read/,
+      );
+    });
+
+    it('lets a pricing reader ask for a trade audience', async () => {
+      const trader = { ...draft({ id: 'pl_trader', audience: 'trader' as const }), status: 'published' as const };
+      const prices = await controller([trader]).prices({ skus: 'AG-LB-005', audience: 'trader' }, req('user_s'));
+      expect(prices['AG-LB-005'].audience).toBe('trader');
+    });
+
+    it('returns nothing for an empty or missing sku list', async () => {
+      const ctl = controller([live()]);
+      expect(await ctl.prices({}, {})).toEqual({});
+      expect(await ctl.prices({ skus: '' }, {})).toEqual({});
+      expect(await ctl.prices({ skus: ',,,' }, {})).toEqual({});
+    });
+  });
+
+  describe('skusFrom', () => {
+    it('trims, drops blanks and removes duplicates', () => {
+      expect(skusFrom(' AG-LB-005 , AG-EG-001 ,,AG-LB-005 ')).toEqual(['AG-LB-005', 'AG-EG-001']);
+    });
+
+    it('ignores a non-string param', () => {
+      expect(skusFrom(undefined)).toEqual([]);
+      expect(skusFrom(['AG-LB-005'])).toEqual([]);
+    });
+
+    it('caps the list so one anonymous request cannot price the whole catalogue', () => {
+      const many = Array.from({ length: MAX_PRICE_SKUS + 25 }, (_, i) => `AG-SKU-${i}`).join(',');
+      expect(skusFrom(many)).toHaveLength(MAX_PRICE_SKUS);
+    });
   });
 });
