@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, NotFoundException, Param, Post, Query } from '@nestjs/common';
 import { RequirePermissions } from '@ag/nest-auth';
+import { currentSession, runWithSession } from '@ag/db';
 import { CatalogService } from './catalog.service';
 import { CatalogueFilters, CatalogueItem } from './catalog.types';
 import { Channel, FulfilmentType, Phase, Temperature } from '@ag/shared-types';
@@ -17,30 +18,43 @@ export function filtersFromQuery(q: Record<string, unknown>): CatalogueFilters {
   return filters;
 }
 
+/**
+ * The storefront is browsed before it is joined (T-082), so the catalogue reads
+ * are public. They are not unscoped: with no caller the session is anonymous,
+ * and the policies from migration 0025 expose only active rows to it. A caller
+ * that already has a session (a signed-in customer, or staff) keeps it, so staff
+ * still see inactive rows. The anonymous case is set explicitly rather than
+ * inherited from the middleware, so the intent is visible at the call site.
+ */
+function withCatalogueSession<T>(fn: () => T): T {
+  const session = currentSession();
+  const authenticated = Boolean(session.userId ?? session.orgId ?? session.staff);
+  return authenticated ? fn() : runWithSession({ staff: false }, fn);
+}
+
 @Controller('commerce/catalog')
 export class CatalogController {
   constructor(private readonly service: CatalogService) {}
 
   @Get()
-  @RequirePermissions('catalog:read')
   list(@Query() q: Record<string, unknown>): Promise<CatalogueItem[]> {
-    return this.service.list(filtersFromQuery(q));
+    return withCatalogueSession(() => this.service.list(filtersFromQuery(q)));
   }
 
   @Get('search')
-  @RequirePermissions('catalog:read')
   search(@Query() q: Record<string, unknown>) {
     const query = typeof q.q === 'string' ? q.q : '';
-    return this.service.search(query, filtersFromQuery(q), {
-      limit: Number(q.limit) || undefined,
-      minScore: Number(q.minScore) || undefined,
-    });
+    return withCatalogueSession(() =>
+      this.service.search(query, filtersFromQuery(q), {
+        limit: Number(q.limit) || undefined,
+        minScore: Number(q.minScore) || undefined,
+      }),
+    );
   }
 
   @Get(':sku')
-  @RequirePermissions('catalog:read')
   get(@Param('sku') sku: string): Promise<CatalogueItem> {
-    return this.service.get(sku);
+    return withCatalogueSession(() => this.service.get(sku));
   }
 
   @Post()

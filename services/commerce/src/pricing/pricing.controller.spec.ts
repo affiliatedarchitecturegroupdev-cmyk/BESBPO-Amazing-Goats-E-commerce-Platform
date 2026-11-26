@@ -51,14 +51,46 @@ describe('PricingController', () => {
 
   it('defaults the audience to public for the price lookup', async () => {
     const live = { ...draft(), status: 'published' as const };
-    const price = await controller([live]).price({ sku: 'AG-LB-005' });
+    const price = await controller([live]).price({ sku: 'AG-LB-005' }, {});
     expect(price?.audience).toBe('public');
   });
 
   it('ignores an unknown audience and falls back to public', async () => {
     const live = { ...draft(), status: 'published' as const };
-    const price = await controller([live]).price({ sku: 'AG-LB-005', audience: 'nonsense' });
+    const price = await controller([live]).price({ sku: 'AG-LB-005', audience: 'nonsense' }, {});
     expect(price?.audience).toBe('public');
+  });
+
+  it('serves the public price to a caller with no session', async () => {
+    // The storefront is browsed before it is joined (T-082): no user, no token.
+    const live = { ...draft(), status: 'published' as const };
+    const price = await controller([live]).price({ sku: 'AG-LB-005', audience: 'public' }, {});
+    expect(price?.priceExVatCents).toBe(29000);
+  });
+
+  it('refuses a trade audience to a caller without pricing:read', async () => {
+    const live = { ...draft(), status: 'published' as const };
+    const anonymous = controller([live]);
+    expect(() => anonymous.price({ sku: 'AG-LB-005', audience: 'trader' }, {})).toThrow(
+      /requires pricing:read/,
+    );
+    expect(() => anonymous.active({ audience: 'trade_a' }, {})).toThrow(/requires pricing:read/);
+  });
+
+  it('lets a customer session read the public audience but not a trade one', async () => {
+    const live = { ...draft(), status: 'published' as const };
+    const ctl = controller([live]);
+    const customer = { user: { id: 'user_c', roles: ['customer_household'] } };
+    expect((await ctl.price({ sku: 'AG-LB-005' }, customer))?.audience).toBe('public');
+    expect(() => ctl.price({ sku: 'AG-LB-005', audience: 'bakery' }, customer)).toThrow(
+      /requires pricing:read/,
+    );
+  });
+
+  it('lets a pricing reader ask for a trade audience', async () => {
+    const trader = { ...draft({ id: 'pl_trader', audience: 'trader' as const }), status: 'published' as const };
+    const price = await controller([trader]).price({ sku: 'AG-LB-005', audience: 'trader' }, req('user_s'));
+    expect(price?.audience).toBe('trader');
   });
 
   it('keeps the four-eyes rule aligned with the RBAC two-person list', () => {
