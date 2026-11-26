@@ -82,3 +82,5 @@ Human approves gated tasks. Phase 0 foundations, 1 launch, 2 trade and range, 3 
 | T-078 | Storefront: delivery-area checker and transparent delivery pricing | 6 | frontend | none |
 | T-079 | Commerce: wishlist, back-in-stock alerts and abandoned-cart recovery | 6 | backend | gate:outbound |
 | T-080 | All apps: accessibility and Core Web Vitals audit and fixes | 6 | qa | none |
+| T-081 | Deployment: root Dockerfile and startable container images | 8 | human | gate:infra |
+| T-082 | Commerce: anonymous catalogue read behind an active-only RLS session | 5 | backend | gate:rbac |
