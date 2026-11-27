@@ -24,6 +24,22 @@ describe('api-client', () => {
     expect(calls[0].url).toBe('https://gw.example/commerce/catalog?category=lamb&phase=1');
   });
 
+  it('reads many prices in one call, comma-joined and encoded', async () => {
+    const { impl, calls } = stubFetch(jsonResponse({ 'AG-EG-001': { priceExVatCents: 4500 } }));
+    const prices = await createClient('https://gw.example', () => ({}), impl).prices(['AG-EG-001', 'AG-LB-005']);
+    expect(calls[0].url).toBe('https://gw.example/commerce/pricing/prices?skus=AG-EG-001%2CAG-LB-005');
+    expect(prices['AG-EG-001'].priceExVatCents).toBe(4500);
+  });
+
+  it('sends the audience only when one is named', async () => {
+    const { impl, calls } = stubFetch(jsonResponse({}), jsonResponse({}));
+    const client = createClient('https://gw.example', () => ({}), impl);
+    await client.prices(['AG-EG-001']);
+    await client.prices(['AG-EG-001'], 'trader');
+    expect(calls[0].url).not.toContain('audience');
+    expect(calls[1].url).toContain('audience=trader');
+  });
+
   it('sends the caller bearer token from getHeaders', async () => {
     const { impl, calls } = stubFetch(jsonResponse([]));
     const client = createClient('https://gw.example', () => ({ authorization: 'Bearer t' }), impl);

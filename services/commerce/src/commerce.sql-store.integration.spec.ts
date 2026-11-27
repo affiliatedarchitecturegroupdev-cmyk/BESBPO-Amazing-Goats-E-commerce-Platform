@@ -206,32 +206,53 @@ describe.skipIf(!admin)('commerce SQL adapters (integration)', () => {
 
     it('upserts a new variant and removes it', async () => {
       const store = new PgCatalogueStore(app!);
-      await store.upsert(catalogueItem());
+      await runWithSession({ staff: true }, () => store.upsert(catalogueItem()));
       const read = await store.get('IT-NEW-001');
       expect(read).toMatchObject({ name: 'IT new product', temperature: 'ambient', halaalAvailable: true });
 
-      expect(await store.remove('IT-NEW-001')).toBe(true);
+      expect(await runWithSession({ staff: true }, () => store.remove('IT-NEW-001'))).toBe(true);
       expect(await store.get('IT-NEW-001')).toBeUndefined();
+    });
+
+    it('shows an anonymous caller only the active catalogue', async () => {
+      const store = new PgCatalogueStore(app!);
+      await runWithSession({ staff: true }, () =>
+        store.upsert(catalogueItem({ id: 'IT-RETIRED-001', sku: 'IT-RETIRED-001', active: false })),
+      );
+      try {
+        // No session at all is the anonymous storefront request (T-082).
+        const anonymous = await runWithSession({}, () => store.all());
+        expect(anonymous.some((i) => i.sku === 'IT-RETIRED-001')).toBe(false);
+        expect(anonymous.some((i) => i.sku === SKU)).toBe(true);
+        expect(await runWithSession({}, () => store.get('IT-RETIRED-001'))).toBeUndefined();
+
+        const staff = await runWithSession({ staff: true }, () => store.all());
+        expect(staff.some((i) => i.sku === 'IT-RETIRED-001')).toBe(true);
+      } finally {
+        await runWithSession({ staff: true }, () => store.remove('IT-RETIRED-001'));
+      }
     });
   });
 
   describe('PgPricingStore', () => {
     it('inserts a draft list with its items and reads it back', async () => {
       const store = new PgPricingStore(app!);
-      await store.insert(priceList());
-      const read = await store.get('it_pl_public');
+      await runWithSession({ staff: true }, () => store.insert(priceList()));
+      const read = await runWithSession({ staff: true }, () => store.get('it_pl_public'));
       expect(read?.status).toBe('draft');
       expect(read?.items).toEqual([{ sku: SKU, priceExVatCents: 27500, unitPriceBasis: 'kg' }]);
     });
 
     it('publishes a list by replacing it, keeping one row per domain id', async () => {
       const store = new PgPricingStore(app!);
-      await store.replace(
-        priceList({ status: 'published', approvedBy: USER_A, publishedAt: '2026-02-01T00:00:00.000Z' }),
+      await runWithSession({ staff: true }, () =>
+        store.replace(
+          priceList({ status: 'published', approvedBy: USER_A, publishedAt: '2026-02-01T00:00:00.000Z' }),
+        ),
       );
-      const all = await store.all();
+      const all = await runWithSession({ staff: true }, () => store.all());
       expect(all.filter((l) => l.id === 'it_pl_public')).toHaveLength(1);
-      expect((await store.get('it_pl_public'))?.status).toBe('published');
+      expect((await runWithSession({ staff: true }, () => store.get('it_pl_public')))?.status).toBe('published');
     });
   });
 

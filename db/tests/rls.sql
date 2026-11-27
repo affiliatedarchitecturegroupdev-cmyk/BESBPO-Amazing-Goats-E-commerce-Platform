@@ -30,6 +30,36 @@ INSERT INTO catalog.products (id, line_id, slug, name) VALUES
 INSERT INTO catalog.variants (id, product_id, sku, unit, fulfilment, temperature, channel, phase, source_kind) VALUES
   ('00000000-0000-0000-0000-00000000a001', 'c0000000-0000-0000-0000-000000000001', 'RLS-1', 'each', 'in_stock', 'ambient', 'both', 1, 'test');
 
+-- Catalogue read for the public (migration 0025). A live product and variant are
+-- browsable; a retired product, a retired variant and a retired variant that was
+-- bought are the cases the policy has to tell apart. Inserted as the superuser,
+-- read as the app role below.
+INSERT INTO catalog.products (id, line_id, slug, name, active) VALUES
+  ('c0000000-0000-0000-0000-0000000000a1', (SELECT id FROM catalog.product_lines WHERE code = 'RLS'), 'rls-live-product', 'RLS live product', true),
+  ('c0000000-0000-0000-0000-0000000000a2', (SELECT id FROM catalog.product_lines WHERE code = 'RLS'), 'rls-retired-product', 'RLS retired product', false);
+INSERT INTO catalog.variants (id, product_id, sku, unit, fulfilment, temperature, channel, phase, source_kind, active) VALUES
+  ('00000000-0000-0000-0000-00000000b001', 'c0000000-0000-0000-0000-0000000000a1', 'RLS-LIVE', 'each', 'in_stock', 'ambient', 'both', 1, 'test', true),
+  ('00000000-0000-0000-0000-00000000b002', 'c0000000-0000-0000-0000-0000000000a1', 'RLS-RETIRED', 'each', 'in_stock', 'ambient', 'both', 1, 'test', false),
+  ('00000000-0000-0000-0000-00000000b003', 'c0000000-0000-0000-0000-0000000000a2', 'RLS-HIDDEN-PARENT', 'each', 'in_stock', 'ambient', 'both', 1, 'test', true);
+
+-- A retired variant that appears on a past order stays readable to the customer
+-- who bought it, or their history would lose the line. The order line is
+-- inserted after the order below.
+INSERT INTO catalog.variants (id, product_id, sku, unit, fulfilment, temperature, channel, phase, source_kind, active) VALUES
+  ('00000000-0000-0000-0000-00000000b004', 'c0000000-0000-0000-0000-0000000000a1', 'RLS-BOUGHT-RETIRED', 'each', 'in_stock', 'ambient', 'both', 1, 'test', false);
+
+-- Price lists: a live public list is readable; a trader list, a superseded list
+-- and a draft are not (migration 0025).
+INSERT INTO catalog.price_lists (id, external_id, code, name, audience, valid_from, valid_to, status) VALUES
+  ('d0000000-0000-0000-0000-0000000000e1', 'rls_pl_public', 'RLS-PUBLIC', 'RLS public', 'public', now() - interval '1 day', NULL, 'published'),
+  ('d0000000-0000-0000-0000-0000000000e2', 'rls_pl_trader', 'RLS-TRADER', 'RLS trader', 'trader', now() - interval '1 day', NULL, 'published'),
+  ('d0000000-0000-0000-0000-0000000000e3', 'rls_pl_draft', 'RLS-DRAFT', 'RLS draft', 'public', now() - interval '1 day', NULL, 'draft'),
+  ('d0000000-0000-0000-0000-0000000000e4', 'rls_pl_superseded', 'RLS-SUPERSEDED', 'RLS superseded', 'public', now() - interval '1 day', NULL, 'superseded'),
+  ('d0000000-0000-0000-0000-0000000000e5', 'rls_pl_expired', 'RLS-EXPIRED', 'RLS expired', 'public', now() - interval '3 days', now() - interval '1 day', 'published');
+INSERT INTO catalog.price_list_items (price_list_id, variant_id, price_ex_vat_cents) VALUES
+  ('d0000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-00000000b001', 19900),
+  ('d0000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-00000000b001', 14900);
+
 -- Two tenants, one customer each, one order / invoice / campaign each.
 INSERT INTO identity.orgs (id, kind, name) VALUES
   ('11111111-1111-1111-1111-111111111111', 'customer', 'RLS Org A'),
@@ -41,7 +71,8 @@ INSERT INTO sales.orders (id, customer_user_id, org_id) VALUES
   ('0a000000-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111'),
   ('0b000000-0000-0000-0000-000000000002', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '22222222-2222-2222-2222-222222222222');
 INSERT INTO sales.order_lines (id, order_id, variant_id, qty, unit_price_ex_vat_cents, fulfilment) VALUES
-  ('01a00000-0000-0000-0000-000000000001', '0a000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000a001', 1, 10000, 'in_stock');
+  ('01a00000-0000-0000-0000-000000000001', '0a000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000a001', 1, 10000, 'in_stock'),
+  ('01a00000-0000-0000-0000-000000000002', '0a000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000b004', 1, 12000, 'in_stock');
 INSERT INTO accounts.invoices (id, number, org_id, issued_on, due_on, subtotal_ex_vat_cents, vat_cents, total_inc_vat_cents) VALUES
   ('1a000000-0000-0000-0000-000000000001', 'RLS-INV-A', '11111111-1111-1111-1111-111111111111', current_date, current_date + 30, 10000, 1500, 11500),
   ('1b000000-0000-0000-0000-000000000002', 'RLS-INV-B', '22222222-2222-2222-2222-222222222222', current_date, current_date + 30, 20000, 3000, 23000);
@@ -258,8 +289,94 @@ ROLLBACK TO SAVEPOINT s;
 -- Children inherit the parent's visibility.
 SAVEPOINT s;
   SET LOCAL app.org_id = '11111111-1111-1111-1111-111111111111';
-  SELECT pg_temp.assert_eq((SELECT count(*) FROM sales.order_lines), 1, 'order_lines org A sees own');
+  SELECT pg_temp.assert_eq((SELECT count(*) FROM sales.order_lines), 2, 'order_lines org A sees own');
   SELECT pg_temp.assert_eq((SELECT count(*) FROM accounts.invoice_lines), 1, 'invoice_lines org A sees own');
+ROLLBACK TO SAVEPOINT s;
+
+-- Catalogue read for the public (migration 0025). The storefront must be
+-- browsable without an account, but only the live rows are public.
+SAVEPOINT s;
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.products WHERE slug IN ('rls-live-product', 'rls-retired-product')), 1,
+    'products: public sees only the active product');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.products WHERE slug = 'rls-retired-product'), 0,
+    'products: a retired product stays hidden');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.variants WHERE sku LIKE 'RLS-%'), 2,
+    'variants: public sees the active variants only');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.variants WHERE sku = 'RLS-RETIRED'), 0,
+    'variants: a retired variant stays hidden');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.variants WHERE sku = 'RLS-HIDDEN-PARENT'), 0,
+    'variants: an active variant of a retired product stays hidden');
+ROLLBACK TO SAVEPOINT s;
+
+-- A retired variant that a customer actually bought stays readable to them, so
+-- their order history does not lose the line. A different customer sees nothing.
+SAVEPOINT s;
+  SET LOCAL app.user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.variants WHERE sku = 'RLS-BOUGHT-RETIRED'), 1,
+    'variants: a bought retired variant is visible to its buyer');
+ROLLBACK TO SAVEPOINT s;
+
+SAVEPOINT s;
+  SET LOCAL app.user_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.variants WHERE sku = 'RLS-BOUGHT-RETIRED'), 0,
+    'variants: another customer does not see the bought retired variant');
+ROLLBACK TO SAVEPOINT s;
+
+-- Pricing: only a published, in-window `public` list is readable. A trader list
+-- must not leak to the storefront, and a superseded list is not current even
+-- though its window is still open.
+SAVEPOINT s;
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.price_lists WHERE code LIKE 'RLS-%'), 1,
+    'price_lists: public sees only the live public list');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.price_lists WHERE code = 'RLS-TRADER'), 0,
+    'price_lists: a trader list stays hidden');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.price_lists WHERE code = 'RLS-SUPERSEDED'), 0,
+    'price_lists: a superseded list stays hidden');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.price_lists WHERE code = 'RLS-EXPIRED'), 0,
+    'price_lists: an expired list stays hidden');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.price_list_items), 1,
+    'price_list_items: public sees only the public list''s items');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.price_list_items WHERE price_list_id = 'd0000000-0000-0000-0000-0000000000e2'), 0,
+    'price_list_items: a trader list''s items stay hidden even by id');
+ROLLBACK TO SAVEPOINT s;
+
+-- Staff see the retired rows and every price list, as before.
+SAVEPOINT s;
+  SET LOCAL app.staff = 'on';
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.products WHERE slug IN ('rls-live-product', 'rls-retired-product')), 2,
+    'products: staff sees the retired product');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.variants WHERE sku LIKE 'RLS-%'), 5,
+    'variants: staff sees every variant');
+  SELECT pg_temp.assert_eq(
+    (SELECT count(*) FROM catalog.price_lists WHERE code LIKE 'RLS-%'), 5,
+    'price_lists: staff sees every list');
+ROLLBACK TO SAVEPOINT s;
+
+-- The public may not write the catalogue: the write policies are staff-only.
+SAVEPOINT s;
+  DO $$
+  BEGIN
+    INSERT INTO catalog.products (line_id, slug, name)
+    VALUES ((SELECT id FROM catalog.product_lines WHERE code = 'RLS'), 'rls-sneaky-product', 'Sneaky');
+    RAISE EXCEPTION 'products: public INSERT was allowed, the write policy is not enforced';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END $$;
 ROLLBACK TO SAVEPOINT s;
 
 RESET ROLE;

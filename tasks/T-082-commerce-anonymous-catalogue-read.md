@@ -30,27 +30,27 @@ window)`) and `catalog.content` uses `status = 'published' OR staff = 'on'`. Thi
 extends that established pattern to the product catalogue rather than inventing a new one.
 
 ## Acceptance
-- [ ] `catalog.products`, `catalog.variants` and `catalog.price_lists` get
+- [x] `catalog.products`, `catalog.variants` and `catalog.price_lists` get
       `ENABLE ROW LEVEL SECURITY` and a `SELECT` policy of the form
       `staff = 'on' OR active`, following `merch_sections_select` and
       `content_public_read`; writes stay staff-only
-- [ ] `catalog.price_list_items` inherits its list's visibility through a subquery
+- [x] `catalog.price_list_items` inherits its list's visibility through a subquery
       policy, so a `trader` price cannot be read by an anonymous caller who guesses a
       list id — the `content_products` pattern
-- [ ] A price read is restricted to the `public` audience unless the caller holds
+- [x] A price read is restricted to the `public` audience unless the caller holds
       `pricing:read`; `?audience=trader` from an anonymous caller is refused, not
       silently downgraded, so the refusal is observable and testable
-- [ ] `GET /commerce/catalog`, `GET /commerce/catalog/search` and
+- [x] `GET /commerce/catalog`, `GET /commerce/catalog/search` and
       `GET /commerce/catalog/:sku` are reachable without a session and return active
       rows only; an inactive product and an inactive variant are both absent
-- [ ] The session is explicit: an unauthenticated catalogue request runs under a named
+- [x] The session is explicit: an unauthenticated catalogue request runs under a named
       anonymous context (`runWithSession({ staff: false })`), not by accident of the
       middleware default, so the intent is readable in the code
-- [ ] A draft (`active = false`) product, an expired price list and a `trader` price are
+- [x] A draft (`active = false`) product, an expired price list and a `trader` price are
       each proven invisible to an anonymous caller in `db/tests/rls.sql`
-- [ ] The same three reads still work for a signed-in customer and for staff, and staff
+- [x] The same three reads still work for a signed-in customer and for staff, and staff
       still see inactive rows
-- [ ] Tests added and passing: the storefront home, category and product pages render a
+- [x] Tests added and passing: the storefront home, category and product pages render a
       price for a visitor with no `ag_token` cookie
 
 ## Notes

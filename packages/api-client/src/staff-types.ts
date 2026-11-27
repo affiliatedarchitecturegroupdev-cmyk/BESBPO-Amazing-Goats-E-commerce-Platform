@@ -132,6 +132,17 @@ export interface PriceList {
   publishedAt?: string;
 }
 
+/** A resolved price for one SKU, with the VAT breakdown, matching commerce `ResolvedPrice`. */
+export interface ResolvedPrice {
+  sku: string;
+  priceListCode: string;
+  audience: string;
+  priceExVatCents: Money;
+  vatCents: Money;
+  priceIncVatCents: Money;
+  unitPriceBasis: string;
+}
+
 /** A merchandising section, matching commerce `MerchSection`. */
 export interface MerchSection {
   id: string;

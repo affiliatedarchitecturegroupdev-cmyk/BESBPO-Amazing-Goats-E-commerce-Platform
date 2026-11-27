@@ -86,10 +86,46 @@ export class BffService {
     return body;
   }
 
+  /**
+   * The catalogue the storefront renders. The catalogue rows carry no price of
+   * their own, so the `public` price list fills `priceCents` here — one bulk
+   * read for the whole page rather than a call per tile (T-082 follow-on).
+   *
+   * Deliberately best-effort: pricing being down must not empty the shop, so a
+   * failed or missing price read leaves `priceCents` unset and the page shows
+   * "price on request" instead of blocking the catalogue. The value is the
+   * ex-VAT list price, which is what the cart and the price list both mean by
+   * "price"; the product page renders the VAT-inclusive figure and says so.
+   */
   async catalogue(view: ViewChannel, authorization?: string): Promise<CatalogueResponse> {
     const payload = await this.get('commerce', '/commerce/catalog', authorization);
     const items = coerceBffItems(payload).filter((v) => visibleTo(v.channel, view));
-    return { view, count: items.length, items };
+    return { view, count: items.length, items: await this.withPrices(items, authorization) };
+  }
+
+  /** Apply the public price list to catalogue rows, leaving unpriced rows alone. */
+  private async withPrices(
+    items: BffCatalogueItem[],
+    authorization?: string,
+  ): Promise<BffCatalogueItem[]> {
+    if (items.length === 0) return items;
+    const skus = items.map((i) => i.sku);
+    let prices: Record<string, { priceExVatCents?: unknown }> = {};
+    try {
+      const query = encodeURIComponent(skus.join(','));
+      prices = (await this.get('commerce', `/commerce/pricing/prices?skus=${query}`, authorization)) as Record<
+        string,
+        { priceExVatCents?: unknown }
+      >;
+    } catch {
+      return items;
+    }
+    return items.map((item) => {
+      const cents = prices?.[item.sku]?.priceExVatCents;
+      return typeof cents === 'number' && Number.isInteger(cents) && cents >= 0
+        ? { ...item, priceCents: cents }
+        : item;
+    });
   }
 
   /**
@@ -106,7 +142,26 @@ export class BffService {
     } catch {
       sections = [];
     }
-    return { view, page, sections };
+    return { view, page, sections: await this.withPricedSections(sections, authorization) };
+  }
+
+  /**
+   * Merchandising tiles are catalogue rows too, and the home and category pages
+   * render their prices, so they get the same public-list fill as the catalogue.
+   * Sections share rows, so this prices each distinct SKU once.
+   */
+  private async withPricedSections(
+    sections: ResolvedSectionView[],
+    authorization?: string,
+  ): Promise<ResolvedSectionView[]> {
+    const unique = new Map<string, BffCatalogueItem>();
+    for (const section of sections) for (const item of section.items) unique.set(item.sku, item.item);
+    if (unique.size === 0) return sections;
+    const priced = new Map((await this.withPrices([...unique.values()], authorization)).map((i) => [i.sku, i]));
+    return sections.map((section) => ({
+      ...section,
+      items: section.items.map((i) => ({ ...i, item: priced.get(i.sku) ?? i.item })),
+    }));
   }
 
   async home(view: ViewChannel, authorization?: string): Promise<HomeResponse> {
