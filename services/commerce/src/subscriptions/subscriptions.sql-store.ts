@@ -68,6 +68,24 @@ export class PgSubscriptionStore implements SubscriptionStore {
     return rows.map(toSubscription);
   }
 
+  /**
+   * A customer's own subscriptions. The owner is compared on the domain id
+   * (`customer_user_ref`), which is the column `toSubscription` reads back, so the
+   * filter and the projection agree; `subscriptions_owner` enforces the same
+   * comparison in the database, and this predicate keeps it true even if the
+   * session is a staff one that RLS would otherwise widen.
+   */
+  async listByCustomer(userId: string): Promise<Subscription[]> {
+    const { rows } = await this.db.withSession(currentSession(), (tx) =>
+      tx.query<SubscriptionRow>(
+        `SELECT ${SUB_COLUMNS} FROM sales.subscriptions
+          WHERE customer_user_ref = $1 ORDER BY next_run_at`,
+        [userId],
+      ),
+    );
+    return rows.map(toSubscription);
+  }
+
   async getSubscription(id: string): Promise<Subscription | undefined> {
     const { rows } = await this.db.withSession(currentSession(), (tx) =>
       tx.query<SubscriptionRow>(`SELECT ${SUB_COLUMNS} FROM sales.subscriptions WHERE external_id = $1`, [id]),

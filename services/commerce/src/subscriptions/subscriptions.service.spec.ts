@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import type { CycleRecord } from '../cycles/cycle-engine';
 import { SubscriptionsService } from './subscriptions.service';
 import { InMemorySubscriptionStore } from './subscriptions.store';
@@ -89,5 +89,59 @@ describe('SubscriptionsService', () => {
     const svc = service([], [standing]);
     await svc.setStandingOrderActive('so_1', false);
     expect(await svc.dueStanding(new Date('2026-11-11T05:00:00.000Z'))).toHaveLength(0);
+  });
+});
+
+describe('SubscriptionsService — the shopper\'s own schedule (T-056)', () => {
+  const mine = { ...sub, id: 'sub_mine', customerUserId: 'user_1' };
+  const theirs = { ...sub, id: 'sub_theirs', customerUserId: 'user_2' };
+
+  it('lists only the caller\'s subscriptions', async () => {
+    const svc = service([mine, theirs]);
+    const rows = await svc.mySubscriptions({ userId: 'user_1', staff: false });
+    expect(rows.map((r) => r.id)).toEqual(['sub_mine']);
+  });
+
+  it('does not leak the owner id to the storefront', async () => {
+    const svc = service([mine]);
+    const [row] = await svc.mySubscriptions({ userId: 'user_1', staff: false });
+    expect(row).not.toHaveProperty('customerUserId');
+  });
+
+  it('refuses an anonymous caller', async () => {
+    const svc = service([mine]);
+    await expect(svc.mySubscriptions({ staff: false })).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('404s when a customer asks for another customer\'s subscription', async () => {
+    const svc = service([theirs]);
+    await expect(svc.mySubscription('sub_theirs', { userId: 'user_1', staff: false })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('lets staff read any subscription', async () => {
+    const svc = service([theirs]);
+    expect((await svc.mySubscription('sub_theirs', { userId: 'staff_1', staff: true })).id).toBe('sub_theirs');
+  });
+
+  it('pauses the owner\'s subscription without moving the next run', async () => {
+    const svc = service([mine]);
+    const paused = await svc.setPausedByOwner('sub_mine', true, { userId: 'user_1', staff: false });
+    expect(paused.paused).toBe(true);
+    expect(paused.nextRunAt).toBe(mine.nextRunAt);
+  });
+
+  it('resumes a paused subscription', async () => {
+    const svc = service([{ ...mine, paused: true }]);
+    const resumed = await svc.setPausedByOwner('sub_mine', false, { userId: 'user_1', staff: false });
+    expect(resumed.paused).toBe(false);
+  });
+
+  it('refuses to let a customer pause another customer\'s subscription', async () => {
+    const svc = service([theirs]);
+    await expect(
+      svc.setPausedByOwner('sub_theirs', true, { userId: 'user_1', staff: false }),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

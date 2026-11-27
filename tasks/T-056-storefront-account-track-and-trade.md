@@ -17,6 +17,7 @@ in to the trade portal).
       — status and a derived four-step progress are done; the driver ETA, live
 temperature and the A8 offer from logistics are **not** wired (see Progress)
 - [ ] `/account` shows orders, subscriptions and invoices for the signed-in shopper
+      — orders and subscriptions are done; invoices are not (see Progress)
 - [x] `/trade` routes a business to the application and the trade portal
 - [x] `api-client` gains the reads these pages need (`myOrders`, `myOrder`)
 - [x] Tests added and passing
@@ -40,9 +41,22 @@ temperature and the A8 offer from logistics are **not** wired (see Progress)
       they are keyed by delivery run, not by order id, so joining them needs a
       logistics read this card did not include. The page does not invent an ETA.
 - [ ] Still open: the A8 thank-you offer on the delivered state.
-- [ ] `/account` still shows only the profile card. Orders are now linked from
-      it; subscriptions and invoices remain, and invoices need a commerce read
-      this card does not cover.
+- [x] **Subscriptions (this change).** `/account` now lists the shopper's
+      recurring orders with the cadence, the next run in South African time, and
+      a pause/resume control. The reads are `GET /commerce/my-subscriptions` and
+      `GET /commerce/my-subscriptions/:id`, and the writes are
+      `POST .../:id/pause` and `POST .../:id/resume`, all behind
+      `@RequireAuthenticated` for the same reason tracking is: a customer holds
+      `customer:own`, not a staff permission.
+- [x] Ownership is decided in commerce from the session
+      (`sales.subscriptions.customer_user_id`) and again in
+      `subscription-access.ts` before projection. A caller who does not own a
+      subscription gets the same 404 as one asking for an id that does not
+      exist, so ids cannot be probed.
+- [x] Pausing is not skipping: `nextRunAt` is kept and shown, so a resumed
+      subscription does not silently move to a different day.
+- [ ] `/account` still needs invoices, which need a commerce read this card does
+      not cover.
 
 ## Notes
 `docs/wireframes/index.html#sf-track`, `#sf-account`, `#sf-trade-entry`. A8 (the

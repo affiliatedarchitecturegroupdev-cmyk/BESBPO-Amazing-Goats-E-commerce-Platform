@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { selectStore } from '@ag/db';
 import type { Db } from '@ag/db';
 import { AG_DB } from '@ag/nest-db';
+import { MySubscriptionsController } from './my-subscriptions.controller';
 import { SubscriptionsController } from './subscriptions.controller';
 import { CYCLE_SOURCE, SUBSCRIPTION_STORE, SubscriptionsService } from './subscriptions.service';
 import { InMemorySubscriptionStore, SubscriptionStore } from './subscriptions.store';
@@ -11,7 +12,7 @@ import { CYCLE_STORE } from '../cycles/cycles.service';
 
 @Module({
   imports: [CyclesModule],
-  controllers: [SubscriptionsController],
+  controllers: [SubscriptionsController, MySubscriptionsController],
   providers: [
     SubscriptionsService,
     {

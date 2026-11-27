@@ -1,5 +1,11 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import type { CycleRecord } from '../cycles/cycle-engine';
+import type { Caller } from '../orders/order-access';
+import {
+  PublicSubscription,
+  canViewSubscription,
+  toPublicSubscription,
+} from './subscription-access';
 import {
   SubscriptionError,
   advance,
@@ -35,6 +41,48 @@ export class SubscriptionsService {
   async get(id: string): Promise<Subscription> {
     const subscription = await this.store.getSubscription(id);
     if (!subscription) throw new NotFoundException(`unknown subscription ${id}`);
+    return subscription;
+  }
+
+  /**
+   * The shopper's own subscriptions (`/account`). Behind `@RequireAuthenticated`
+   * rather than `orders:read`, because a customer does not hold that permission
+   * and must not gain it to see their own schedule.
+   */
+  async mySubscriptions(caller: Caller): Promise<PublicSubscription[]> {
+    if (!caller.userId) throw new UnauthorizedException('sign in to see your subscriptions');
+    return (await this.store.listByCustomer(caller.userId)).map(toPublicSubscription);
+  }
+
+  /**
+   * One subscription, for its owner or staff. A caller who does not own it gets
+   * the same 404 as one asking for a subscription that does not exist, so the
+   * response cannot be used to test whether an id is real.
+   */
+  async mySubscription(id: string, caller: Caller): Promise<PublicSubscription> {
+    return toPublicSubscription(await this.ownedSubscription(id, caller));
+  }
+
+  /**
+   * Pause or resume a subscription the caller owns. The transition reuses
+   * `pause`/`resume` from the rules, so a shopper's pause and a staff pause mean
+   * the same thing and `nextRunAt` is left alone (a pause is not a skip).
+   */
+  async setPausedByOwner(id: string, paused: boolean, caller: Caller): Promise<PublicSubscription> {
+    const subscription = await this.ownedSubscription(id, caller);
+    const next = paused ? pause(subscription) : resume(subscription);
+    return toPublicSubscription(await this.store.saveSubscription(next));
+  }
+
+  /** Read a subscription the caller is allowed to see, or throw the same 404 either way. */
+  private async ownedSubscription(id: string, caller: Caller): Promise<Subscription> {
+    if (!caller.userId && !caller.staff) {
+      throw new UnauthorizedException('sign in to see your subscriptions');
+    }
+    const subscription = await this.store.getSubscription(id);
+    if (!subscription || !canViewSubscription(subscription, caller)) {
+      throw new NotFoundException(`unknown subscription ${id}`);
+    }
     return subscription;
   }
 
