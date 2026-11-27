@@ -349,6 +349,28 @@ describe.skipIf(!admin)('commerce SQL adapters (integration)', () => {
       expect(theirs).toBeUndefined();
     });
 
+    it('lists only the customer\'s own subscriptions, as the account page needs', async () => {
+      const store = new PgSubscriptionStore(app!);
+      const other: Subscription = { ...subscription, id: 'it_sub_2', customerUserId: USER_B };
+      await runWithSession({ userId: USER_A }, () => store.saveSubscription(subscription));
+      await runWithSession({ userId: USER_B }, () => store.saveSubscription(other));
+
+      const mine = await runWithSession({ userId: USER_A }, () => store.listByCustomer(USER_A));
+      expect(mine.map((s) => s.id)).toEqual(['it_sub_1']);
+
+      const theirs = await runWithSession({ userId: USER_B }, () => store.listByCustomer(USER_B));
+      expect(theirs.map((s) => s.id)).toEqual(['it_sub_2']);
+    });
+
+    it('filters by owner even when the session is staff, where RLS alone would widen', async () => {
+      const store = new PgSubscriptionStore(app!);
+      await runWithSession({ userId: USER_A }, () => store.saveSubscription(subscription));
+      const rows = await runWithSession({ userId: USER_B, staff: true }, () => store.listByCustomer(USER_A));
+      expect(rows.map((s) => s.id)).toEqual(['it_sub_1']);
+      const none = await runWithSession({ userId: USER_B, staff: true }, () => store.listByCustomer(USER_B));
+      expect(none).toEqual([]);
+    });
+
     it('round-trips a standing order with its lines', async () => {
       const store = new PgSubscriptionStore(app!);
       const standing: StandingOrder = {

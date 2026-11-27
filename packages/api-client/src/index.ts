@@ -234,6 +234,20 @@ export interface MyOrder {
   createdAt: string;
 }
 
+/** How often a recurring order runs. */
+export type SubscriptionCadence = 'weekly' | 'fortnightly' | 'monthly';
+
+/** The shopper's view of their own subscription: no owner id. */
+export interface MySubscription {
+  id: string;
+  cadence: SubscriptionCadence;
+  /** ISO instant of the next run. */
+  nextRunAt: string;
+  paused: boolean;
+  /** Run instants the customer skipped. */
+  skipped: string[];
+}
+
 /** A line as the tracking page shows it. */
 export interface OrderLineView {
   sku: string;
@@ -397,6 +411,20 @@ export function createClient(
     // above: these need only a signed-in customer, not `orders:read`.
     myOrders: () => req<MyOrder[]>('/commerce/my-orders'),
     myOrder: (id: string) => req<MyOrder>(`/commerce/my-orders/${encodeURIComponent(id)}`),
+
+    // The shopper's own subscriptions (`/account`, T-056). Same audience rule as
+    // the order reads above: signed in, own rows only.
+    mySubscriptions: () => req<MySubscription[]>('/commerce/my-subscriptions'),
+    mySubscription: (id: string) =>
+      req<MySubscription>(`/commerce/my-subscriptions/${encodeURIComponent(id)}`),
+    pauseSubscription: (id: string) =>
+      req<MySubscription>(`/commerce/my-subscriptions/${encodeURIComponent(id)}/pause`, {
+        method: 'POST',
+      }),
+    resumeSubscription: (id: string) =>
+      req<MySubscription>(`/commerce/my-subscriptions/${encodeURIComponent(id)}/resume`, {
+        method: 'POST',
+      }),
 
     // Retail media.
     serveAds: (slot: string, context: Record<string, string | number> = {}) =>

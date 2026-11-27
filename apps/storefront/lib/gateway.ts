@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { ApiError, createClient, type ApiClient, type CatalogueFilters,
-  type MyOrder, type PublicZoneTable, type RecipeSummary, type RecipeView, type ResolvedSection } from '@ag/api-client';
+  type MyOrder, type MySubscription, type PublicZoneTable, type RecipeSummary,
+  type RecipeView, type ResolvedSection } from '@ag/api-client';
 import { toStorefrontItems, type StorefrontItem } from './catalog';
 import type { ServedAd } from './placements';
 
@@ -164,6 +165,19 @@ export async function loadMyOrder(id: string): Promise<Loaded<MyOrder | undefine
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return { data: undefined };
     return { data: undefined, error: message(err) };
+  }
+}
+
+/**
+ * The shopper's own subscriptions (`/account`, T-056). A customer who holds no
+ * subscriptions is an empty list, not an error, so the page shows an invitation
+ * rather than a failure.
+ */
+export async function loadMySubscriptions(): Promise<Loaded<MySubscription[]>> {
+  try {
+    return { data: await gatewayClient().mySubscriptions() };
+  } catch (err) {
+    return { data: [], error: message(err) };
   }
 }
 
