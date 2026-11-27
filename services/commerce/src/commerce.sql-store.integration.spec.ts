@@ -362,13 +362,16 @@ describe.skipIf(!admin)('commerce SQL adapters (integration)', () => {
       expect(theirs.map((s) => s.id)).toEqual(['it_sub_2']);
     });
 
-    it('filters by owner even when the session is staff, where RLS alone would widen', async () => {
+    it('narrows to the owner even in a staff session, where RLS alone would allow every row', async () => {
       const store = new PgSubscriptionStore(app!);
-      await runWithSession({ userId: USER_A }, () => store.saveSubscription(subscription));
-      const rows = await runWithSession({ userId: USER_B, staff: true }, () => store.listByCustomer(USER_A));
-      expect(rows.map((s) => s.id)).toEqual(['it_sub_1']);
-      const none = await runWithSession({ userId: USER_B, staff: true }, () => store.listByCustomer(USER_B));
-      expect(none).toEqual([]);
+      // A staff session bypasses the owner policy, so only the WHERE clause keeps
+      // one shopper's schedule out of another shopper's list.
+      const forB = await runWithSession({ userId: USER_B, staff: true }, () => store.listByCustomer(USER_B));
+      expect(forB.map((s) => s.id)).toEqual(['it_sub_2']);
+
+      const forA = await runWithSession({ userId: USER_B, staff: true }, () => store.listByCustomer(USER_A));
+      expect(forA.map((s) => s.id)).toEqual(['it_sub_1']);
+      expect(forA.map((s) => s.id)).not.toContain('it_sub_2');
     });
 
     it('round-trips a standing order with its lines', async () => {
